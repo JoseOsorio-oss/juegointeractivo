@@ -1,0 +1,3288 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Proyecto Cero: Operación Desarme</title>
+
+  <!-- Tipografías Tácticas -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+  <style>
+    /* =========================================================================
+       1. VARIABLES DE DISEÑO Y RESET GLOBAL (CSS NATIVO)
+       ========================================================================= */
+    :root {
+      --bg-void: #050810;
+      --bg-panel: #0f1624;
+      --bg-card: #131c2e;
+      --bg-inset: #080c15;
+      --metal-border: #2c394f;
+      --metal-highlight: #475569;
+      --accent-amber: #f59e0b;
+      --accent-amber-glow: rgba(245, 158, 11, 0.35);
+      --accent-red: #ef4444;
+      --accent-red-glow: rgba(239, 68, 68, 0.45);
+      --accent-green: #10b981;
+      --accent-green-glow: rgba(16, 185, 129, 0.4);
+      --accent-cyan: #06b6d4;
+      --accent-cyan-glow: rgba(6, 182, 212, 0.4);
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --font-display: 'Orbitron', monospace;
+      --font-mono: 'Share Tech Mono', monospace;
+      --font-ui: 'Inter', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      min-height: 100vh;
+      min-height: 100dvh;
+      background-color: var(--bg-void);
+      color: var(--text-primary);
+      font-family: var(--font-ui);
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Fondo de rejilla táctica sutil */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(30, 41, 59, 0.22) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(30, 41, 59, 0.22) 1px, transparent 1px);
+      background-size: 32px 32px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* Franjas industriales de peligro */
+    .hazard-bar {
+      height: 10px;
+      width: 100%;
+      border-radius: 4px;
+      background: repeating-linear-gradient(
+        -45deg,
+        var(--accent-amber),
+        var(--accent-amber) 12px,
+        #090d16 12px,
+        #090d16 24px
+      );
+    }
+
+    /* Remaches metálicos */
+    .rivet {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #cbd5e1, #334155 70%, #0f172a);
+      box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.9);
+      position: absolute;
+      z-index: 3;
+    }
+    .rivet-tl { top: 10px; left: 10px; }
+    .rivet-tr { top: 10px; right: 10px; }
+    .rivet-bl { bottom: 10px; left: 10px; }
+    .rivet-br { bottom: 10px; right: 10px; }
+
+    /* =========================================================================
+       >>> [SECCIÓN CSS: CURSOR DE MOUSE PERSONALIZADO EN FORMA DE MANO] <<<
+       Se activa automáticamente al colocar tu PNG en CONFIG_SPRITES.cursorMouseMano
+       ========================================================================= */
+    body.has-custom-cursor,
+    body.has-custom-cursor button,
+    body.has-custom-cursor .wire-item,
+    body.has-custom-cursor .acrylic-shield,
+    body.has-custom-cursor .manual-bar,
+    body.has-custom-cursor .m-tab,
+    body.has-custom-cursor canvas#maze-canvas,
+    body.has-custom-cursor input[type="range"] {
+      cursor: var(--cursor-hand-url), pointer !important;
+    }
+
+    /* =========================================================================
+       2. SISTEMA DE CONTENEDORES PARA SPRITES PNG (.sprite-slot)
+       ========================================================================= */
+    .sprite-slot {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .sprite-slot img.sprite-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: none; /* Se activa automáticamente vía JS cuando carga el PNG */
+      image-rendering: auto;
+    }
+
+    .sprite-slot .sprite-fallback {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Tamaños específicos por espacio de Sprite */
+    .slot-logo-menu {
+      width: 150px;
+      height: 150px;
+      margin: 0 auto 12px auto;
+    }
+
+    .slot-mod-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 6px;
+      background: rgba(8, 12, 21, 0.8);
+      border: 1px solid var(--metal-border);
+      padding: 3px;
+    }
+
+    .slot-defuse-btn {
+      width: 74px;
+      height: 74px;
+      pointer-events: none;
+    }
+
+    .slot-result-sprite {
+      width: 140px;
+      height: 140px;
+      margin: 0 auto 12px auto;
+    }
+
+    .slot-bomb-texture {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      opacity: 0.2;
+      mix-blend-mode: overlay;
+      z-index: 1;
+      border-radius: 14px;
+    }
+    .slot-bomb-texture img.sprite-img {
+      object-fit: cover;
+    }
+
+    /* =========================================================================
+       3. ANIMACIONES DE ALERTA, SACUDIDA Y DETONACIÓN
+       ========================================================================= */
+    @keyframes pulse-beacon {
+      0%, 100% { opacity: 0.25; transform: scale(0.95); }
+      50% { opacity: 1; transform: scale(1.1); }
+    }
+
+    @keyframes core-danger-pulse {
+      0%, 100% {
+        border-color: var(--metal-border);
+        box-shadow: inset 0 0 25px rgba(239, 68, 68, 0.15), 0 15px 40px rgba(0, 0, 0, 0.85);
+      }
+      50% {
+        border-color: var(--accent-red);
+        box-shadow: inset 0 0 45px rgba(239, 68, 68, 0.55), 0 0 25px rgba(239, 68, 68, 0.4);
+      }
+    }
+    .core-alert-active {
+      animation: core-danger-pulse 0.85s infinite;
+    }
+
+    @keyframes timer-danger-blink {
+      0%, 100% {
+        border-color: var(--accent-red);
+        box-shadow: 0 0 18px rgba(239, 68, 68, 0.45);
+        transform: scale(1);
+      }
+      50% {
+        border-color: #fca5a5;
+        box-shadow: 0 0 28px rgba(239, 68, 68, 0.85);
+        transform: scale(1.03);
+      }
+    }
+    .hud-timer-box.danger-fast {
+      animation: timer-danger-blink 0.65s infinite;
+    }
+
+    @keyframes shake-light {
+      0%, 100% { transform: translate(0, 0); }
+      20% { transform: translate(-6px, 4px); }
+      40% { transform: translate(6px, -4px); }
+      60% { transform: translate(-4px, -3px); }
+      80% { transform: translate(4px, 3px); }
+    }
+    .shake-light {
+      animation: shake-light 0.35s ease-in-out;
+    }
+
+    @keyframes shake-massive {
+      0% { transform: translate(0, 0) rotate(0deg) scale(1); }
+      10% { transform: translate(-16px, -12px) rotate(-1.8deg) scale(1.02); }
+      20% { transform: translate(18px, 14px) rotate(1.8deg) scale(0.99); }
+      30% { transform: translate(-14px, 12px) rotate(-1.5deg) scale(1.02); }
+      40% { transform: translate(16px, -15px) rotate(2deg) scale(0.98); }
+      50% { transform: translate(-18px, 10px) rotate(-1.6deg) scale(1.01); }
+      60% { transform: translate(14px, -12px) rotate(1.2deg) scale(0.99); }
+      70% { transform: translate(-12px, 15px) rotate(-1.2deg) scale(1.01); }
+      80% { transform: translate(12px, -8px) rotate(0.8deg) scale(0.99); }
+      90% { transform: translate(-6px, 6px) rotate(-0.4deg) scale(1); }
+      100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+    }
+    .shake-massive {
+      animation: shake-massive 0.45s infinite;
+    }
+
+    /* Destello blanco/naranja de explosión */
+    #flash-screen {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle, #ffffff 10%, #fed7aa 60%, #f97316 100%);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 2600;
+      transition: opacity 0.06s ease-out;
+    }
+    #flash-screen.flash-on {
+      opacity: 0.92;
+    }
+
+    #explosion-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 2500;
+    }
+
+    /* =========================================================================
+       4. PANTALLAS DE ESTADO COMPLETO (MENÚ, VICTORIA, DERROTA)
+       ========================================================================= */
+    .full-screen-view {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at 50% 30%, rgba(19, 28, 46, 0.95) 0%, rgba(5, 8, 16, 0.98) 100%);
+      backdrop-filter: blur(8px);
+      z-index: 1500;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      overflow-y: auto;
+    }
+
+    .screen-card {
+      background: linear-gradient(180deg, #162033 0%, #0d1320 100%);
+      border: 2px solid var(--metal-border);
+      border-radius: 16px;
+      max-width: 520px;
+      width: 100%;
+      padding: 24px 20px;
+      text-align: center;
+      position: relative;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+
+    .menu-audio-bar {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .btn-audio-pill {
+      background: var(--bg-inset);
+      border: 1px solid var(--metal-border);
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-width: 44px;
+      min-height: 44px;
+      transition: all 0.2s;
+      touch-action: manipulation;
+    }
+    .btn-audio-pill:hover {
+      border-color: var(--accent-amber);
+    }
+    .btn-audio-pill.muted {
+      color: var(--text-secondary);
+      border-color: #1e293b;
+      opacity: 0.65;
+    }
+
+    .screen-title {
+      font-family: var(--font-display);
+      font-size: 1.75rem;
+      font-weight: 900;
+      letter-spacing: 2px;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+    }
+
+    .screen-subtitle {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--accent-amber);
+      letter-spacing: 1.5px;
+      margin-bottom: 16px;
+    }
+
+    .briefing-box {
+      background: var(--bg-inset);
+      border: 1px solid #1e293b;
+      border-left: 3px solid var(--accent-amber);
+      border-radius: 8px;
+      padding: 12px 14px;
+      text-align: left;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: #cbd5e1;
+      line-height: 1.5;
+      margin-bottom: 18px;
+    }
+
+    .briefing-box ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .btn-primary-tactical {
+      width: 100%;
+      min-height: 52px;
+      padding: 12px 18px;
+      background: linear-gradient(180deg, #fbbf24 0%, #d97706 100%);
+      color: #050810;
+      font-family: var(--font-display);
+      font-weight: 900;
+      font-size: 1rem;
+      letter-spacing: 1.5px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      box-shadow: 0 6px 20px var(--accent-amber-glow);
+      transition: transform 0.15s, filter 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      touch-action: manipulation;
+    }
+    .btn-primary-tactical:active {
+      transform: scale(0.97);
+    }
+
+    .btn-secondary-tactical {
+      width: 100%;
+      min-height: 46px;
+      padding: 10px 16px;
+      background: #1e293b;
+      color: var(--text-primary);
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.85rem;
+      letter-spacing: 1px;
+      border: 1px solid var(--metal-highlight);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.15s;
+      touch-action: manipulation;
+    }
+    .btn-secondary-tactical:active {
+      background: #334155;
+    }
+
+    .btn-group-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* Insignia de Rango en Victoria */
+    .rank-badge {
+      display: inline-block;
+      font-family: var(--font-display);
+      font-size: 1.2rem;
+      font-weight: 900;
+      padding: 6px 18px;
+      border-radius: 8px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 2px solid var(--accent-green);
+      color: var(--accent-green);
+      box-shadow: 0 0 18px var(--accent-green-glow);
+      margin-bottom: 14px;
+    }
+
+    .stats-grid {
+      background: var(--bg-inset);
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 18px;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+    }
+
+    .stat-line {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid #172033;
+    }
+    .stat-line:last-child {
+      border-bottom: none;
+    }
+
+    /* =========================================================================
+       5. BARRA SUPERIOR DE GAMEPLAY (HUD)
+       ========================================================================= */
+    #pantalla-gameplay {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      min-height: 100dvh;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hud-header {
+      background: rgba(10, 15, 26, 0.96);
+      border-bottom: 2px solid var(--metal-border);
+      padding: max(10px, env(safe-area-inset-top)) 14px 10px 14px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.75);
+    }
+
+    .hud-inner {
+      max-width: 1060px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .hud-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .hud-beacon {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent-red);
+      box-shadow: 0 0 12px var(--accent-red);
+      animation: pulse-beacon 0.85s infinite;
+    }
+
+    .hud-brand h1 {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      letter-spacing: 1px;
+    }
+
+    .hud-brand span {
+      display: block;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--accent-amber);
+    }
+
+    /* Reloj Digital */
+    .hud-timer-box {
+      background: #030508;
+      border: 2px solid #5c1111;
+      border-radius: 10px;
+      padding: 4px 14px;
+      text-align: center;
+      box-shadow: 0 0 16px rgba(239, 68, 68, 0.25);
+      transition: all 0.3s ease;
+    }
+
+    .hud-timer-box.frozen {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 18px var(--accent-cyan-glow);
+    }
+
+    .hud-timer-label {
+      font-family: var(--font-mono);
+      font-size: 0.62rem;
+      color: var(--text-secondary);
+      letter-spacing: 1px;
+    }
+
+    .hud-timer-digits {
+      font-family: var(--font-display);
+      font-size: 1.85rem;
+      font-weight: 900;
+      color: var(--accent-red);
+      text-shadow: 0 0 10px var(--accent-red-glow);
+      line-height: 1.05;
+      letter-spacing: 2px;
+    }
+
+    .hud-timer-box.frozen .hud-timer-digits {
+      color: var(--accent-cyan);
+      text-shadow: 0 0 10px var(--accent-cyan-glow);
+    }
+
+    /* Strikes */
+    .hud-strikes-box {
+      background: var(--bg-inset);
+      border: 1px solid var(--metal-border);
+      border-radius: 10px;
+      padding: 4px 10px;
+      text-align: center;
+    }
+
+    .hud-strikes-label {
+      font-family: var(--font-mono);
+      font-size: 0.62rem;
+      color: var(--text-secondary);
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .strikes-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .strike-pip {
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      background: #172033;
+      border: 1px solid #334155;
+      color: #475569;
+      font-family: var(--font-display);
+      font-weight: 900;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.25s ease;
+    }
+
+    .strike-pip.active {
+      background: var(--accent-red);
+      border-color: #fca5a5;
+      color: #ffffff;
+      box-shadow: 0 0 12px var(--accent-red);
+      transform: scale(1.1);
+    }
+
+    /* Barra de Hitos */
+    .hud-milestones-box {
+      min-width: 155px;
+    }
+
+    .milestones-top {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      margin-bottom: 4px;
+    }
+
+    .milestone-pips {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 5px;
+    }
+
+    .m-pip {
+      height: 9px;
+      border-radius: 4px;
+      background: #080c15;
+      border: 1px solid var(--metal-border);
+      transition: all 0.35s ease;
+    }
+
+    .m-pip.done {
+      background: var(--accent-green);
+      border-color: #6ee7b7;
+      box-shadow: 0 0 8px var(--accent-green-glow);
+    }
+
+    .hud-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    /* Banner flotante de notificación de Hito */
+    .milestone-banner {
+      max-width: 1020px;
+      margin: 10px auto 0 auto;
+      padding: 8px 14px;
+      border-radius: 8px;
+      background: rgba(6, 182, 212, 0.16);
+      border: 1px solid var(--accent-cyan);
+      color: #cffafe;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      text-align: center;
+      box-shadow: 0 4px 15px rgba(6, 182, 212, 0.2);
+      transition: opacity 0.3s;
+    }
+
+    /* =========================================================================
+       6. CARCASA DE LA BOMBA Y MÓDULOS INTERACTIVOS
+       ========================================================================= */
+    .bomb-stage {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 12px calc(105px + env(safe-area-inset-bottom)) 12px;
+    }
+
+    .bomb-chassis {
+      background: radial-gradient(circle at 50% 30%, #1e293b 0%, #0c121e 100%);
+      border: 3px solid var(--metal-border);
+      border-radius: 18px;
+      box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.9), 0 16px 45px rgba(0, 0, 0, 0.85);
+      max-width: 1020px;
+      width: 100%;
+      padding: 18px;
+      position: relative;
+    }
+
+    .modules-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-bottom: 16px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .module-unit {
+      background: linear-gradient(180deg, rgba(19, 28, 46, 0.96) 0%, rgba(11, 17, 30, 0.98) 100%);
+      border: 2px solid var(--metal-border);
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.75);
+      transition: border-color 0.3s ease;
+    }
+
+    .module-unit.solved {
+      border-color: rgba(16, 185, 129, 0.55);
+    }
+
+    .module-top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      border-bottom: 1px solid var(--metal-border);
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+    }
+
+    .module-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .module-name {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--accent-amber);
+      letter-spacing: 0.8px;
+    }
+
+    .status-led {
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: #273244;
+      border: 2px solid #090d16;
+      transition: all 0.3s ease;
+      flex-shrink: 0;
+    }
+
+    .status-led.on {
+      background: var(--accent-green);
+      box-shadow: 0 0 14px var(--accent-green), inset 0 0 4px #ffffff;
+    }
+
+    /* --- MÓDULO 1: CABLES DE CONTROL --- */
+    .wires-rack {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      height: 172px;
+      background: var(--bg-inset);
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 10px 4px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .wire-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      height: 100%;
+      min-width: 54px;
+      min-height: 48px;
+      cursor: pointer;
+      position: relative;
+      touch-action: manipulation;
+    }
+
+    .wire-socket {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #64748b, #1e293b);
+      border: 2px solid #0f172a;
+      z-index: 2;
+    }
+
+    .wire-body {
+      width: 16px;
+      flex: 1;
+      margin: -2px 0;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.15s ease;
+    }
+
+    .wire-item:active .wire-body {
+      transform: scaleX(1.22);
+    }
+
+    .wire-half-top, .wire-half-bottom {
+      width: 100%;
+      height: 50%;
+      transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s;
+    }
+
+    .wire-half-top { border-radius: 5px 5px 0 0; }
+    .wire-half-bottom { border-radius: 0 0 5px 5px; }
+
+    /* Colores realistas de cables con brillo cilíndrico */
+    .c-rojo .wire-half-top, .c-rojo .wire-half-bottom {
+      background: linear-gradient(90deg, #991b1b, #ef4444 45%, #7f1d1d);
+    }
+    .c-azul .wire-half-top, .c-azul .wire-half-bottom {
+      background: linear-gradient(90deg, #1e40af, #3b82f6 45%, #1e3a8a);
+    }
+    .c-amarillo .wire-half-top, .c-amarillo .wire-half-bottom {
+      background: linear-gradient(90deg, #a16207, #facc15 45%, #854d0e);
+    }
+    .c-negro .wire-half-top, .c-negro .wire-half-bottom {
+      background: linear-gradient(90deg, #0f172a, #475569 45%, #020617);
+    }
+    .c-verde .wire-half-top, .c-verde .wire-half-bottom {
+      background: linear-gradient(90deg, #166534, #22c55e 45%, #14532d);
+    }
+
+    /* Estado de cable cortado */
+    .wire-item.cut {
+      pointer-events: none;
+    }
+    .wire-item.cut .wire-half-top {
+      transform: translateY(-10px) rotate(-14deg);
+      opacity: 0.75;
+    }
+    .wire-item.cut .wire-half-bottom {
+      transform: translateY(10px) rotate(12deg);
+      opacity: 0.75;
+    }
+
+    .wire-color-tag {
+      font-family: var(--font-mono);
+      font-size: 0.62rem;
+      font-weight: bold;
+      padding: 1px 4px;
+      border-radius: 4px;
+      margin-top: 3px;
+      background: #141e33;
+      border: 1px solid #2c394f;
+      color: #e2e8f0;
+      letter-spacing: 0.3px;
+    }
+
+    .wire-label-num {
+      font-family: var(--font-mono);
+      font-size: 0.64rem;
+      color: var(--text-secondary);
+      margin-top: 1px;
+    }
+
+    @keyframes spark-fly {
+      0% {
+        opacity: 1;
+        transform: translate(0, 0) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(var(--sx), var(--sy)) scale(0.15);
+      }
+    }
+
+    .wire-spark {
+      position: absolute;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #fef08a;
+      box-shadow: 0 0 8px #f59e0b, 0 0 14px #ffffff;
+      pointer-events: none;
+      z-index: 15;
+      animation: spark-fly 0.42s ease-out forwards;
+    }
+
+    /* --- MÓDULO 2: DECODIFICADOR HEXADECIMAL --- */
+    .hex-screens-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .hex-screen-card {
+      background: #030508;
+      border: 1px solid #263348;
+      border-radius: 8px;
+      padding: 6px 8px;
+      text-align: center;
+    }
+
+    .hex-screen-card small {
+      display: block;
+      font-family: var(--font-mono);
+      font-size: 0.62rem;
+      color: var(--text-secondary);
+      margin-bottom: 2px;
+    }
+
+    .hex-target-value {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 900;
+      color: var(--accent-cyan);
+      text-shadow: 0 0 8px var(--accent-cyan-glow);
+      letter-spacing: 3px;
+    }
+
+    .pin-entered-value {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: 4px;
+    }
+
+    .keypad-matrix {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .key-btn {
+      background: #1b2538;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      min-height: 50px;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 1.15rem;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.08s, background 0.12s;
+      touch-action: manipulation;
+    }
+
+    .key-btn:active {
+      background: var(--accent-amber);
+      color: #050810;
+      transform: scale(0.93);
+    }
+
+    .key-btn.key-clr {
+      color: var(--accent-red);
+      border-color: rgba(239, 68, 68, 0.4);
+    }
+
+    .key-btn.key-ok {
+      color: var(--accent-green);
+      border-color: rgba(16, 185, 129, 0.4);
+    }
+
+    /* --- MÓDULO 3: LABERINTO DE CIRCUITO --- */
+    .maze-wrapper {
+      background: var(--bg-inset);
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    canvas#maze-canvas {
+      width: 100%;
+      max-width: 380px;
+      height: 165px;
+      border-radius: 8px;
+      background: #04070d;
+      touch-action: none;
+      cursor: grab;
+      display: block;
+    }
+    canvas#maze-canvas:active {
+      cursor: grabbing;
+    }
+
+    .maze-hint {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+    }
+
+    /* --- MÓDULO 4: CALIBRADOR DE FRECUENCIA, VOLTAJE Y PRESIÓN --- */
+    .wave-preview-box {
+      background: #03060c;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      height: 46px;
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+
+    canvas#calib-wave-canvas {
+      width: 100%;
+      height: 46px;
+      display: block;
+    }
+
+    .sliders-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .slider-card {
+      background: var(--bg-inset);
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 6px 10px;
+    }
+
+    .slider-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      margin-bottom: 2px;
+    }
+
+    .slider-reading {
+      color: var(--accent-amber);
+      font-weight: bold;
+    }
+
+    .slider-tag {
+      font-size: 0.68rem;
+      font-weight: bold;
+    }
+    .tag-ok { color: var(--accent-green); }
+    .tag-err { color: var(--accent-red); }
+
+    input[type="range"].tactical-slider {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 36px;
+      background: transparent;
+      touch-action: manipulation;
+    }
+    input[type="range"].tactical-slider:focus {
+      outline: none;
+    }
+    input[type="range"].tactical-slider::-webkit-slider-runnable-track {
+      width: 100%;
+      height: 10px;
+      background: #1e293b;
+      border-radius: 5px;
+      border: 1px solid #334155;
+    }
+    input[type="range"].tactical-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent-amber);
+      margin-top: -12px;
+      border: 2px solid #fef3c7;
+      box-shadow: 0 0 12px var(--accent-amber-glow);
+      cursor: pointer;
+    }
+    input[type="range"].tactical-slider::-moz-range-thumb {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent-amber);
+      border: 2px solid #fef3c7;
+      box-shadow: 0 0 12px var(--accent-amber-glow);
+      cursor: pointer;
+    }
+
+    .btn-calib-lock {
+      margin-top: 10px;
+      width: 100%;
+      min-height: 50px;
+      background: #182234;
+      border: 2px solid var(--accent-amber);
+      color: var(--accent-amber);
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      font-weight: bold;
+      letter-spacing: 1px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      touch-action: manipulation;
+    }
+    .btn-calib-lock:active {
+      background: var(--accent-amber);
+      color: #050810;
+    }
+
+    /* =========================================================================
+       7. MÓDULO FINAL DE DESACTIVACIÓN Y CUBIERTA ACRÍLICA 3D
+       ========================================================================= */
+    .final-core-panel {
+      background: linear-gradient(180deg, #0c1322 0%, #070b14 100%);
+      border: 2px solid var(--metal-border);
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      z-index: 2;
+    }
+
+    .lock-pill {
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      padding: 5px 12px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    .lock-pill.locked {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid var(--accent-red);
+      color: #fca5a5;
+    }
+    .lock-pill.unlocked {
+      background: rgba(16, 185, 129, 0.16);
+      border: 1px solid var(--accent-green);
+      color: #6ee7b7;
+    }
+
+    .defuse-housing {
+      perspective: 750px;
+      width: 144px;
+      height: 144px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .acrylic-shield {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.22) 0%, rgba(148, 163, 184, 0.08) 100%);
+      border: 2px solid rgba(255, 255, 255, 0.45);
+      border-radius: 14px;
+      backdrop-filter: blur(4px);
+      z-index: 10;
+      transform-origin: top center;
+      transition: transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px;
+      text-align: center;
+      cursor: pointer;
+      box-shadow: inset 0 0 14px rgba(255, 255, 255, 0.2), 0 6px 14px rgba(0, 0, 0, 0.6);
+    }
+
+    .acrylic-shield span {
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      color: #ffffff;
+      text-shadow: 0 1px 3px #000;
+      line-height: 1.25;
+    }
+
+    .acrylic-shield.opened {
+      transform: rotateX(118deg);
+      pointer-events: none;
+    }
+
+    .btn-defuse-core {
+      width: 114px;
+      height: 114px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #f87171, #dc2626 55%, #7f1d1d 100%);
+      border: 4px solid #450a0a;
+      box-shadow: 0 7px 0 #450a0a, 0 12px 24px rgba(0, 0, 0, 0.85);
+      color: #ffffff;
+      font-family: var(--font-display);
+      font-weight: 900;
+      font-size: 0.92rem;
+      letter-spacing: 1px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.08s, box-shadow 0.08s;
+      touch-action: manipulation;
+    }
+
+    .btn-defuse-core:active {
+      transform: translateY(5px);
+      box-shadow: 0 2px 0 #450a0a, 0 4px 10px rgba(0, 0, 0, 0.85);
+    }
+
+    /* =========================================================================
+       8. MANUAL DESPLEGABLE CENTRADO EN LA PARTE INFERIOR (BOTTOM SHEET DRAWER)
+       ========================================================================= */
+    .floating-manual {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(96vw, 540px);
+      max-height: 68vh;
+      background: rgba(13, 20, 36, 0.98);
+      backdrop-filter: blur(10px);
+      border: 2px solid var(--accent-amber);
+      border-bottom: none;
+      border-radius: 14px 14px 0 0;
+      padding-bottom: env(safe-area-inset-bottom);
+      box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.92);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: max-height 0.32s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease;
+    }
+
+    .manual-bar {
+      background: linear-gradient(90deg, #f59e0b, #d97706);
+      color: #050810;
+      padding: 12px 16px;
+      font-family: var(--font-display);
+      font-weight: 900;
+      font-size: 0.85rem;
+      letter-spacing: 1px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      min-height: 50px;
+      touch-action: manipulation;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+    }
+
+    .manual-tabs {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      background: #141e33;
+      border-bottom: 1px solid var(--metal-border);
+    }
+
+    .m-tab {
+      min-height: 46px;
+      background: transparent;
+      border: none;
+      border-bottom: 3px solid transparent;
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+      font-size: 0.84rem;
+      font-weight: bold;
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .m-tab.active {
+      color: var(--accent-amber);
+      border-bottom-color: var(--accent-amber);
+      background: rgba(245, 158, 11, 0.14);
+    }
+
+    .manual-content {
+      padding: 14px 16px 18px 16px;
+      font-family: var(--font-mono);
+      font-size: 0.86rem;
+      color: #e2e8f0;
+      line-height: 1.5;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      max-height: calc(68vh - 100px);
+    }
+
+    .manual-content h4 {
+      color: var(--accent-amber);
+      font-size: 0.92rem;
+      margin-bottom: 8px;
+      border-bottom: 1px dashed #334155;
+      padding-bottom: 4px;
+    }
+
+    .manual-content p {
+      margin-bottom: 8px;
+    }
+
+    .hex-lookup-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0;
+      font-size: 0.84rem;
+    }
+    .hex-lookup-table th, .hex-lookup-table td {
+      border: 1px solid #334155;
+      padding: 6px 8px;
+      text-align: center;
+    }
+    .hex-lookup-table th {
+      background: #1e293b;
+      color: var(--accent-cyan);
+    }
+    .hex-lookup-table td strong {
+      color: var(--accent-amber);
+    }
+
+    .floating-manual.collapsed {
+      max-height: calc(50px + env(safe-area-inset-bottom));
+      box-shadow: 0 -6px 24px rgba(245, 158, 11, 0.25);
+    }
+
+    /* =========================================================================
+       9. RESPONSIVIDAD MÓVIL (TELÉFONOS Y TABLETS)
+       ========================================================================= */
+    @media (max-width: 768px) {
+      .modules-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+
+      .bomb-chassis {
+        padding: 14px 12px;
+      }
+
+      .module-unit {
+        padding: 14px 12px;
+      }
+
+      .floating-manual {
+        width: min(96vw, 540px);
+        max-height: 70vh;
+      }
+
+      .manual-content {
+        max-height: calc(70vh - 102px);
+      }
+    }
+
+    @media (max-width: 480px) {
+      .hud-header {
+        padding: max(8px, env(safe-area-inset-top)) 10px 8px 10px;
+      }
+      .hud-brand h1 {
+        font-size: 0.88rem;
+      }
+      .hud-timer-digits {
+        font-size: 1.52rem;
+      }
+      .hud-milestones-box {
+        width: 100%;
+        order: 5;
+      }
+      .screen-title {
+        font-size: 1.4rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- CAPAS GLOBALES DE EXPLOSIÓN Y DESTELLO -->
+  <div id="flash-screen"></div>
+  <canvas id="explosion-canvas" class="hidden"></canvas>
+
+  <!-- =========================================================================
+       PANTALLA 1: MENÚ PRINCIPAL
+       ========================================================================= -->
+  <section id="pantalla-menu" class="full-screen-view">
+    <div class="screen-card">
+      <div class="rivet rivet-tl"></div>
+      <div class="rivet rivet-tr"></div>
+      <div class="rivet rivet-bl"></div>
+      <div class="rivet rivet-br"></div>
+
+      <div class="hazard-bar" style="margin-bottom: 14px;"></div>
+
+      <!-- Controles de Audio y Música del Menú -->
+      <div class="menu-audio-bar">
+        <button type="button" class="btn-audio-pill btn-toggle-music" onclick="gestorAudio.alternarMusica()">
+          🎵 MÚSICA: ON
+        </button>
+        <button type="button" class="btn-audio-pill btn-toggle-sfx" onclick="gestorAudio.alternarSFX()">
+          🔊 EFECTOS: ON
+        </button>
+      </div>
+
+      <!-- =====================================================================
+           >>> [SPRITE PNG #1: LOGO DEL MENÚ PRINCIPAL] <<<
+           Configúralo en JS -> CONFIG_SPRITES.logoMenu (Tamaño ideal: 180x180px)
+           ===================================================================== -->
+      <div class="sprite-slot slot-logo-menu" data-sprite="logoMenu">
+        <img class="sprite-img" alt="Emblema Proyecto Cero">
+        <div class="sprite-fallback">
+          <svg viewBox="0 0 120 120" width="130" height="130" fill="none">
+            <circle cx="60" cy="60" r="54" stroke="#f59e0b" stroke-width="3" stroke-dasharray="10 6"/>
+            <circle cx="60" cy="60" r="42" fill="#080c15" stroke="#ef4444" stroke-width="2.5"/>
+            <path d="M60 28 L68 50 L90 50 L72 63 L79 85 L60 72 L41 85 L48 63 L30 50 L52 50 Z" fill="#f59e0b" opacity="0.9"/>
+            <circle cx="60" cy="60" r="10" fill="#080c15" stroke="#ef4444" stroke-width="2"/>
+          </svg>
+        </div>
+      </div>
+
+      <h1 class="screen-title" style="color: #ffffff;">PROYECTO CERO</h1>
+      <p class="screen-subtitle">OPERACIÓN DESARME // UNIDAD EOD</p>
+
+      <div class="briefing-box">
+        <ul>
+          <li>⏱️ <strong>TIEMPO LÍMITE:</strong> 05:00 minutos para neutralizar los 4 módulos.</li>
+          <li>⚠️ <strong>TOLERANCIA:</strong> Máximo <span style="color: var(--accent-red); font-weight: bold;">3 STRIKES</span> (cada fallo resta -30s).</li>
+          <li>🏅 <strong>HITOS:</strong> El 1.er módulo congela el reloj 15s; el 2.º activa alerta de núcleo; el 4.º libera el botón <strong>DEFUSE</strong>.</li>
+          <li>📖 <strong>MANUAL TÁCTICO:</strong> Siempre disponible abajo a la derecha.</li>
+        </ul>
+      </div>
+
+      <button type="button" id="btn-iniciar-mision" class="btn-primary-tactical" onclick="iniciarMision()">
+        ▶ INICIAR MISIÓN
+      </button>
+    </div>
+  </section>
+
+  <!-- =========================================================================
+       PANTALLA 2: GAMEPLAY (BOMBA INTERACTIVA)
+       ========================================================================= -->
+  <div id="pantalla-gameplay" class="hidden">
+    <!-- HUD Superior -->
+    <header class="hud-header">
+      <div class="hud-inner">
+        <div class="hud-brand">
+          <div class="hud-beacon"></div>
+          <div>
+            <h1>PROYECTO CERO</h1>
+            <span id="hud-core-status">NÚCLEO ARMADO // VIVO</span>
+          </div>
+        </div>
+
+        <!-- Temporizador Digital -->
+        <div id="hud-timer-box" class="hud-timer-box">
+          <div id="hud-timer-label" class="hud-timer-label">DETONACIÓN EN</div>
+          <div id="hud-timer-digits" class="hud-timer-digits">05:00</div>
+        </div>
+
+        <!-- Contador de 3 Strikes -->
+        <div class="hud-strikes-box">
+          <span class="hud-strikes-label">STRIKES (MÁX 3)</span>
+          <div class="strikes-row">
+            <div id="strike-pip-1" class="strike-pip">✕</div>
+            <div id="strike-pip-2" class="strike-pip">✕</div>
+            <div id="strike-pip-3" class="strike-pip">✕</div>
+          </div>
+        </div>
+
+        <!-- Barra de Hitos -->
+        <div class="hud-milestones-box">
+          <div class="milestones-top">
+            <span style="color: var(--text-secondary);">HITOS</span>
+            <span id="hud-milestone-text" style="color: var(--accent-amber);">0 / 4</span>
+          </div>
+          <div class="milestone-pips">
+            <div id="m-pip-1" class="m-pip" title="Hito 1: Congela reloj 15s"></div>
+            <div id="m-pip-2" class="m-pip" title="Hito 2: Alerta de Núcleo"></div>
+            <div id="m-pip-3" class="m-pip" title="Hito 3: Pre-desbloqueo"></div>
+            <div id="m-pip-4" class="m-pip" title="Hito 4: Cubierta Liberada"></div>
+          </div>
+        </div>
+
+        <!-- Controles Rápidos de Audio / Menú -->
+        <div class="hud-actions">
+          <button type="button" class="btn-audio-pill btn-toggle-music" onclick="gestorAudio.alternarMusica()" title="Silenciar/Activar Música">🎵</button>
+          <button type="button" class="btn-audio-pill btn-toggle-sfx" onclick="gestorAudio.alternarSFX()" title="Silenciar/Activar Efectos">🔊</button>
+          <button type="button" class="btn-audio-pill" onclick="volverAlMenu()" title="Abortar al Menú">⌂</button>
+        </div>
+      </div>
+
+      <!-- Notificación dinámica de Hito -->
+      <div id="milestone-banner" class="milestone-banner hidden"></div>
+    </header>
+
+    <!-- Escenario Central de la Bomba -->
+    <main class="bomb-stage">
+      <div id="bomb-chassis" class="bomb-chassis">
+        <!-- ===================================================================
+             >>> [SPRITE PNG #2: TEXTURA METÁLICA DE LA BOMBA (OPCIONAL)] <<<
+             Configúralo en JS -> CONFIG_SPRITES.texturaBomba (Ideal: 800x600px)
+             =================================================================== -->
+        <div class="sprite-slot slot-bomb-texture" data-sprite="texturaBomba">
+          <img class="sprite-img" alt="">
+          <div class="sprite-fallback"></div>
+        </div>
+
+        <div class="rivet rivet-tl"></div>
+        <div class="rivet rivet-tr"></div>
+        <div class="rivet rivet-bl"></div>
+        <div class="rivet rivet-br"></div>
+
+        <!-- Grid de los 4 Minijuegos -->
+        <div class="modules-grid">
+
+          <!-- MÓDULO 1: CABLES -->
+          <article id="card-mod-1" class="module-unit">
+            <div class="module-top-bar">
+              <div class="module-title-wrap">
+                <!-- >>> [SPRITE PNG #3: ÍCONO MÓDULO CABLES -> CONFIG_SPRITES.iconoMod1 (48x48px)] <<< -->
+                <div class="sprite-slot slot-mod-icon" data-sprite="iconoMod1">
+                  <img class="sprite-img" alt="Icono Cables">
+                  <div class="sprite-fallback">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="#f59e0b" stroke-width="2" fill="none">
+                      <path d="M6 3v18M12 3v18M18 3v18"/>
+                    </svg>
+                  </div>
+                </div>
+                <span class="module-name">MOD 01 // CABLES</span>
+              </div>
+              <div id="led-mod-1" class="status-led"></div>
+            </div>
+
+            <div id="wires-rack" class="wires-rack">
+              <!-- Generado dinámicamente por JS -->
+            </div>
+          </article>
+
+          <!-- MÓDULO 2: DECODIFICADOR HEXADECIMAL -->
+          <article id="card-mod-2" class="module-unit">
+            <div class="module-top-bar">
+              <div class="module-title-wrap">
+                <!-- >>> [SPRITE PNG #4: ÍCONO MÓDULO HEX -> CONFIG_SPRITES.iconoMod2 (48x48px)] <<< -->
+                <div class="sprite-slot slot-mod-icon" data-sprite="iconoMod2">
+                  <img class="sprite-img" alt="Icono Hex">
+                  <div class="sprite-fallback">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="#06b6d4" stroke-width="2" fill="none">
+                      <polygon points="12 2 21 7 21 17 12 22 3 17 3 7 12 2"/>
+                    </svg>
+                  </div>
+                </div>
+                <span class="module-name">MOD 02 // DECODER HEX</span>
+              </div>
+              <div id="led-mod-2" class="status-led"></div>
+            </div>
+
+            <div class="hex-screens-row">
+              <div class="hex-screen-card">
+                <small>CÓDIGO HEX</small>
+                <div id="hex-code-display" class="hex-target-value">B 4 F 2</div>
+              </div>
+              <div class="hex-screen-card">
+                <small>PIN INGRESADO</small>
+                <div id="pin-entered-display" class="pin-entered-value">_ _ _ _</div>
+              </div>
+            </div>
+
+            <div class="keypad-matrix">
+              <button type="button" class="key-btn" onclick="pulsarTeclaPin('1')">1</button>
+              <button type="button" class="key-btn" onclick="pulsarTeclaPin('2')">2</button>
+              <button type="button" class="key-btn" onclick="pulsarTeclaPin('3')">3</button>
+              <button type="button" class="key-btn" onclick="pulsarTeclaPin('4')">4</button>
+              <button type="button" class="key-btn" onclick="pulsarTeclaPin('5')">5</button>
+              <button type="button" class="key-btn" onclick="pulsarTeclaPin('6')">6</button>
+              <button type="button" class="key-btn" onclick="pulsarTeclaPin('7')">7</button>
+              <button type="button" class="key-btn" onclick="pulsarTeclaPin('8')">8</button>
+              <button type="button" class="key-btn" onclick="pulsarTeclaPin('9')">9</button>
+              <button type="button" class="key-btn key-clr" onclick="limpiarPin()">CLR</button>
+              <button type="button" class="key-btn" onclick="pulsarTeclaPin('0')">0</button>
+              <button type="button" class="key-btn key-ok" onclick="confirmarPin()">OK</button>
+            </div>
+          </article>
+
+          <!-- MÓDULO 3: LABERINTO DE CIRCUITO -->
+          <article id="card-mod-3" class="module-unit">
+            <div class="module-top-bar">
+              <div class="module-title-wrap">
+                <!-- >>> [SPRITE PNG #5: ÍCONO MÓDULO LABERINTO -> CONFIG_SPRITES.iconoMod3 (48x48px)] <<< -->
+                <div class="sprite-slot slot-mod-icon" data-sprite="iconoMod3">
+                  <img class="sprite-img" alt="Icono Laberinto">
+                  <div class="sprite-fallback">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="#10b981" stroke-width="2" fill="none">
+                      <path d="M3 12h4l3-6 4 12 3-6h4"/>
+                    </svg>
+                  </div>
+                </div>
+                <span class="module-name">MOD 03 // CIRCUITO PULSO</span>
+              </div>
+              <div id="led-mod-3" class="status-led"></div>
+            </div>
+
+            <div class="maze-wrapper">
+              <canvas id="maze-canvas" width="360" height="165"></canvas>
+              <span class="maze-hint">Desliza el dedo de VERDE a ROJO sin tocar bordes</span>
+            </div>
+          </article>
+
+          <!-- MÓDULO 4: CALIBRADOR F/V/P -->
+          <article id="card-mod-4" class="module-unit">
+            <div class="module-top-bar">
+              <div class="module-title-wrap">
+                <!-- >>> [SPRITE PNG #6: ÍCONO MÓDULO CALIBRADOR -> CONFIG_SPRITES.iconoMod4 (48x48px)] <<< -->
+                <div class="sprite-slot slot-mod-icon" data-sprite="iconoMod4">
+                  <img class="sprite-img" alt="Icono Calibrador">
+                  <div class="sprite-fallback">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="#f59e0b" stroke-width="2" fill="none">
+                      <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
+                      <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
+                      <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
+                    </svg>
+                  </div>
+                </div>
+                <span class="module-name">MOD 04 // CALIBRADOR F/V/P</span>
+              </div>
+              <div id="led-mod-4" class="status-led"></div>
+            </div>
+
+            <div class="wave-preview-box">
+              <canvas id="calib-wave-canvas" width="340" height="46"></canvas>
+            </div>
+
+            <div class="sliders-stack">
+              <div class="slider-card">
+                <div class="slider-meta">
+                  <span>FRECUENCIA</span>
+                  <span id="read-freq" class="slider-reading">82.0 MHz</span>
+                  <span id="tag-freq" class="slider-tag tag-err">[AJUSTAR]</span>
+                </div>
+                <input type="range" id="slider-freq" class="tactical-slider" min="80.0" max="100.0" step="0.1" value="82.0">
+              </div>
+
+              <div class="slider-card">
+                <div class="slider-meta">
+                  <span>VOLTAJE</span>
+                  <span id="read-volt" class="slider-reading">240 V</span>
+                  <span id="tag-volt" class="slider-tag tag-err">[AJUSTAR]</span>
+                </div>
+                <input type="range" id="slider-volt" class="tactical-slider" min="200" max="400" step="1" value="240">
+              </div>
+
+              <div class="slider-card">
+                <div class="slider-meta">
+                  <span>PRESIÓN</span>
+                  <span id="read-pres" class="slider-reading">25 PSI</span>
+                  <span id="tag-pres" class="slider-tag tag-err">[AJUSTAR]</span>
+                </div>
+                <input type="range" id="slider-pres" class="tactical-slider" min="10" max="100" step="1" value="25">
+              </div>
+            </div>
+
+            <button type="button" class="btn-calib-lock" onclick="verificarCalibracion()">
+              FIJAR CALIBRACIÓN
+            </button>
+          </article>
+
+        </div>
+
+        <!-- MÓDULO FINAL: BOTÓN CENTRAL DE DESACTIVACIÓN -->
+        <section class="final-core-panel">
+          <div class="module-top-bar" style="width: 100%; margin-bottom: 10px;">
+            <span class="module-name">NÚCLEO CENTRAL // DESACTIVACIÓN DEFINITIVA</span>
+            <div id="led-master" class="status-led"></div>
+          </div>
+
+          <div id="cover-lock-pill" class="lock-pill locked">
+            🔒 SEGURO ACTIVO — COMPLETA LOS 4 MÓDULOS
+          </div>
+
+          <div class="defuse-housing">
+            <div id="acrylic-shield" class="acrylic-shield" onclick="abrirCubiertaAcrilica()">
+              <span>CUBIERTA PROTECTORA<br>(TOCA PARA ABRIR)</span>
+            </div>
+
+            <button type="button" id="btn-defuse-core" class="btn-defuse-core" onclick="ejecutarDesactivacionFinal()">
+              <!-- >>> [SPRITE PNG #7: BOTÓN CENTRAL DEFUSE -> CONFIG_SPRITES.spriteBotonFinal (96x96px)] <<< -->
+              <div class="sprite-slot slot-defuse-btn" data-sprite="spriteBotonFinal">
+                <img class="sprite-img" alt="DEFUSE">
+                <div class="sprite-fallback">DEFUSE</div>
+              </div>
+            </button>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- =========================================================================
+       MANUAL DESPLEGABLE CENTRADO EN LA PARTE INFERIOR (BOTTOM SHEET DRAWER)
+       ========================================================================= -->
+  <aside id="floating-manual" class="floating-manual collapsed hidden">
+    <div class="manual-bar" onclick="alternarColapsoManual()">
+      <span id="manual-handle-text">📖 MANUAL TÁCTICO ▲</span>
+    </div>
+
+    <div class="manual-tabs">
+      <button type="button" class="m-tab active" onclick="cambiarPestanaManual(1, this)">MOD 1</button>
+      <button type="button" class="m-tab" onclick="cambiarPestanaManual(2, this)">MOD 2</button>
+      <button type="button" class="m-tab" onclick="cambiarPestanaManual(3, this)">MOD 3</button>
+      <button type="button" class="m-tab" onclick="cambiarPestanaManual(4, this)">MOD 4</button>
+    </div>
+
+    <div class="manual-content">
+      <!-- Reglas Módulo 1 -->
+      <div id="manual-page-1" class="manual-page">
+        <h4>MOD 01: REGLAS DE CORTE (IZQ → DER)</h4>
+        <p>Evalúa las condiciones en estricto orden:</p>
+        <p>1. Si hay <strong>más de 2 cables ROJOS</strong>, corta el <strong>último cable rojo</strong>.</p>
+        <p>2. Si no, si el <strong>último cable es VERDE</strong> y hay <strong>exactamente 1 AMARILLO</strong>, corta el <strong>1.er cable</strong>.</p>
+        <p>3. Si no, si <strong>no hay ningún cable AZUL</strong>, corta el <strong>2.º cable</strong>.</p>
+        <p>4. En cualquier otro caso, corta el <strong>4.º cable</strong>.</p>
+      </div>
+
+      <!-- Reglas Módulo 2 -->
+      <div id="manual-page-2" class="manual-page hidden">
+        <h4>MOD 02: TABLA HEXADECIMAL → PIN</h4>
+        <p>Convierte los 4 caracteres del visor a dígitos:</p>
+        <table class="hex-lookup-table">
+          <thead>
+            <tr><th>HEX</th><th>DÍGITO</th><th>HEX</th><th>DÍGITO</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>A</td><td><strong>4</strong></td><td>F</td><td><strong>5</strong></td></tr>
+            <tr><td>B</td><td><strong>9</strong></td><td>2</td><td><strong>1</strong></td></tr>
+            <tr><td>C</td><td><strong>7</strong></td><td>4</td><td><strong>2</strong></td></tr>
+            <tr><td>D</td><td><strong>0</strong></td><td>8</td><td><strong>6</strong></td></tr>
+            <tr><td>E</td><td><strong>3</strong></td><td>-</td><td>-</td></tr>
+          </tbody>
+        </table>
+        <p>Ingresa el PIN resultante y pulsa <strong>OK</strong>.</p>
+      </div>
+
+      <!-- Reglas Módulo 3 -->
+      <div id="manual-page-3" class="manual-page hidden">
+        <h4>MOD 03: CIRCUITO DE PULSO</h4>
+        <p>• Toca o haz clic en el nodo <strong>VERDE (INICIO)</strong> y desliza sin soltar hasta el nodo <strong>ROJO (META)</strong>.</p>
+        <p>• <strong style="color: var(--accent-red);">PELIGRO:</strong> Salirte del canal conductor provoca un cortocircuito y suma <strong>1 STRIKE</strong>.</p>
+      </div>
+
+      <!-- Reglas Módulo 4 -->
+      <div id="manual-page-4" class="manual-page hidden">
+        <h4>MOD 04: RANGOS DE CALIBRACIÓN</h4>
+        <p>Ajusta los tres parámetros dentro de sus rangos seguros:</p>
+        <p>• <strong>FRECUENCIA:</strong> <span style="color: var(--accent-green);">88.0 – 91.0 MHz</span></p>
+        <p>• <strong>VOLTAJE:</strong> <span style="color: var(--accent-green);">320 – 345 V</span></p>
+        <p>• <strong>PRESIÓN:</strong> <span style="color: var(--accent-green);">60 – 68 PSI</span></p>
+        <p>Cuando los 3 estén en verde, pulsa <strong>FIJAR CALIBRACIÓN</strong>.</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- =========================================================================
+       PANTALLA 3: VICTORIA
+       ========================================================================= -->
+  <section id="pantalla-victoria" class="full-screen-view hidden">
+    <div class="screen-card" style="border-color: var(--accent-green);">
+      <div class="rivet rivet-tl"></div>
+      <div class="rivet rivet-tr"></div>
+      <div class="rivet rivet-bl"></div>
+      <div class="rivet rivet-br"></div>
+
+      <div class="hazard-bar" style="margin-bottom: 14px;"></div>
+
+      <!-- =====================================================================
+           >>> [SPRITE PNG #8: MEDALLA / TROFEO DE VICTORIA] <<<
+           Configúralo en JS -> CONFIG_SPRITES.spriteVictoria (Ideal: 160x160px)
+           ===================================================================== -->
+      <div class="sprite-slot slot-result-sprite" data-sprite="spriteVictoria">
+        <img class="sprite-img" alt="Medalla Victoria">
+        <div class="sprite-fallback">
+          <svg viewBox="0 0 120 120" width="125" height="125" fill="none">
+            <polygon points="42,10 78,10 70,45 50,45" fill="#059669"/>
+            <circle cx="60" cy="72" r="36" fill="#064e3b" stroke="#10b981" stroke-width="4"/>
+            <path d="M44 72 L55 83 L78 58" stroke="#6ee7b7" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+
+      <h2 class="screen-title" style="color: var(--accent-green);">¡BOMBA DESACTIVADA!</h2>
+      <p class="screen-subtitle">AMENAZA NEUTRALIZADA CON ÉXITO</p>
+
+      <div id="victoria-rango" class="rank-badge">RANGO S — ESPECIALISTA ÉLITE</div>
+
+      <div class="stats-grid">
+        <div class="stat-line">
+          <span>TIEMPO RESTANTE:</span>
+          <strong id="vic-tiempo-restante" style="color: var(--accent-green);">00:00</strong>
+        </div>
+        <div class="stat-line">
+          <span>TIEMPO EMPLEADO:</span>
+          <strong id="vic-tiempo-empleado">00:00</strong>
+        </div>
+        <div class="stat-line">
+          <span>STRIKES COMETIDOS:</span>
+          <strong id="vic-strikes" style="color: var(--accent-amber);">0 / 3</strong>
+        </div>
+        <div class="stat-line">
+          <span>MÓDULOS NEUTRALIZADOS:</span>
+          <strong style="color: var(--accent-green);">4 / 4</strong>
+        </div>
+      </div>
+
+      <div class="btn-group-stack">
+        <button type="button" class="btn-primary-tactical" onclick="iniciarMision()">
+          ↻ JUGAR DE NUEVO
+        </button>
+        <button type="button" class="btn-secondary-tactical" onclick="volverAlMenu()">
+          ⌂ VOLVER AL MENÚ
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================================
+       PANTALLA 4: DERROTA (GAME OVER)
+       ========================================================================= -->
+  <section id="pantalla-derrota" class="full-screen-view hidden">
+    <div class="screen-card" style="border-color: var(--accent-red);">
+      <div class="rivet rivet-tl"></div>
+      <div class="rivet rivet-tr"></div>
+      <div class="rivet rivet-bl"></div>
+      <div class="rivet rivet-br"></div>
+
+      <div class="hazard-bar" style="margin-bottom: 14px;"></div>
+
+      <!-- =====================================================================
+           >>> [SPRITE PNG #9: ÍCONO / EXPLOSIÓN DE DERROTA] <<<
+           Configúralo en JS -> CONFIG_SPRITES.spriteDerrota (Ideal: 160x160px)
+           ===================================================================== -->
+      <div class="sprite-slot slot-result-sprite" data-sprite="spriteDerrota">
+        <img class="sprite-img" alt="Alerta Detonación">
+        <div class="sprite-fallback">
+          <svg viewBox="0 0 120 120" width="125" height="125" fill="none">
+            <polygon points="60,14 108,98 12,98" fill="#450a0a" stroke="#ef4444" stroke-width="4" stroke-linejoin="round"/>
+            <line x1="60" y1="42" x2="60" y2="70" stroke="#fca5a5" stroke-width="7" stroke-linecap="round"/>
+            <circle cx="60" cy="84" r="4.5" fill="#fca5a5"/>
+          </svg>
+        </div>
+      </div>
+
+      <h2 class="screen-title" style="color: var(--accent-red);">DETONACIÓN TOTAL</h2>
+      <p class="screen-subtitle" style="color: #fca5a5;">MISIÓN FALLIDA — PANEL DESTRUIDO</p>
+
+      <div class="stats-grid">
+        <div class="stat-line">
+          <span>CAUSA DEL FALLO:</span>
+          <strong id="der-causa" style="color: var(--accent-red);">TIEMPO AGOTADO</strong>
+        </div>
+        <div class="stat-line">
+          <span>TIEMPO TRANSCURRIDO:</span>
+          <strong id="der-tiempo-empleado">00:00</strong>
+        </div>
+        <div class="stat-line">
+          <span>STRIKES ACUMULADOS:</span>
+          <strong id="der-strikes" style="color: var(--accent-amber);">3 / 3</strong>
+        </div>
+        <div class="stat-line">
+          <span>MÓDULOS RESUELTOS:</span>
+          <strong id="der-modulos">0 / 4</strong>
+        </div>
+      </div>
+
+      <div class="btn-group-stack">
+        <button type="button" class="btn-primary-tactical" onclick="iniciarMision()">
+          ↻ REINTENTAR MISIÓN
+        </button>
+        <button type="button" class="btn-secondary-tactical" onclick="volverAlMenu()">
+          ⌂ VOLVER AL MENÚ
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================================
+       LÓGICA JAVASCRIPT COMPLETA
+       ========================================================================= -->
+  <script>
+    /**
+     * ╔═══════════════════════════════════════════════════════════════════════╗
+     * ║  [ZONA 1] COLOCA AQUÍ TUS ARCHIVOS DE AUDIO PARA LA MÚSICA            ║
+     * ╠═══════════════════════════════════════════════════════════════════════╣
+     * ║  Crea una carpeta "audio/" junto a tu index.html y pon tus .mp3/.ogg  ║
+     * ║  Ejemplo:                                                             ║
+     * ║    menu: "audio/musica_menu.mp3",                                     ║
+     * ║    gameplay: "audio/musica_gameplay.mp3",                             ║
+     * ║    victoria: "audio/musica_victoria.mp3",                             ║
+     * ║    derrota: "audio/musica_derrota.mp3"                                ║
+     * ╚═══════════════════════════════════════════════════════════════════════╝
+     */
+    const CONFIG_MUSICA = {
+      menu: "",       // [AUDIO 1] Música del Menú Principal (se repite en bucle)
+      gameplay: "",   // [AUDIO 2] Música de Tensión durante la partida (bucle)
+      victoria: "",   // [AUDIO 3] Música al desactivar la bomba (suena 1 vez)
+      derrota: ""     // [AUDIO 4] Música de Game Over tras explotar (suena 1 vez)
+    };
+
+    /**
+     * ╔═══════════════════════════════════════════════════════════════════════╗
+     * ║  [ZONA 2] COLOCA AQUÍ TUS IMÁGENES PNG COMO SPRITES                   ║
+     * ╠═══════════════════════════════════════════════════════════════════════╣
+     * ║  Crea una carpeta "sprites/" junto a tu index.html y pon tus .png     ║
+     * ║  Ejemplo:                                                             ║
+     * ║    cursorMouseMano: "sprites/cursor_mano.png",                        ║
+     * ║    logoMenu: "sprites/logo_bomba.png",                                ║
+     * ╚═══════════════════════════════════════════════════════════════════════╝
+     */
+    const CONFIG_SPRITES = {
+      // --- CURSORES E INTERFAZ ---
+      cursorMouseMano: "",    // [SPRITE #0] Ícono de mouse en forma de mano PNG (Ideal: 32x32px)
+      logoMenu: "",           // [SPRITE #1] Emblema en el menú principal (Ideal: 180x180px)
+      texturaBomba: "",       // [SPRITE #2] Textura metálica superpuesta en la bomba (800x600px)
+
+      // --- ÍCONOS DE LOS 4 MÓDULOS ---
+      iconoMod1: "",          // [SPRITE #3] Ícono Módulo 1: Cables (Ideal: 48x48px)
+      iconoMod2: "",          // [SPRITE #4] Ícono Módulo 2: Decodificador Hex (Ideal: 48x48px)
+      iconoMod3: "",          // [SPRITE #5] Ícono Módulo 3: Laberinto de Circuito (Ideal: 48x48px)
+      iconoMod4: "",          // [SPRITE #6] Ícono Módulo 4: Calibrador F/V/P (Ideal: 48x48px)
+
+      // --- ELEMENTOS JUGABLES Y EFECTOS ---
+      cursorLaberinto: "",    // [SPRITE #10] Puntero/argolla dentro del laberinto (Ideal: 32x32px)
+      spriteBotonFinal: "",   // [SPRITE #7] Imagen central del botón rojo DEFUSE (Ideal: 96x96px)
+      particulaExplosion: "", // [SPRITE #11] Sprite de fuego/chispa para explosiones (Ideal: 64x64px)
+
+      // --- PANTALLAS FINALES ---
+      spriteVictoria: "",     // [SPRITE #8] Medalla o insignia en pantalla de Victoria (160x160px)
+      spriteDerrota: ""       // [SPRITE #9] Alerta o bomba detonada en Game Over (160x160px)
+    };
+
+    /* =========================================================================
+       3. CARGADOR AUTOMÁTICO DE SPRITES PNG (DOM, CURSOR DE MANO Y CANVAS)
+       ========================================================================= */
+    const SpritesCanvas = {
+      cursorLaberinto: null,
+      particulaExplosion: null
+    };
+
+    function inicializarSprites() {
+      // 0. Aplicar cursor de mouse en forma de mano si se configuró un PNG
+      const rutaCursorMano = (CONFIG_SPRITES.cursorMouseMano || '').trim();
+      if (rutaCursorMano !== '') {
+        const imgCursor = new Image();
+        imgCursor.onload = () => {
+          if (imgCursor.naturalWidth > 0) {
+            document.documentElement.style.setProperty('--cursor-hand-url', `url("${rutaCursorMano}") 6 2`);
+            document.body.classList.add('has-custom-cursor');
+          }
+        };
+        imgCursor.src = rutaCursorMano;
+      }
+
+      // 1. Cargar sprites en slots del DOM (.sprite-slot)
+      document.querySelectorAll('.sprite-slot').forEach(slot => {
+        const key = slot.getAttribute('data-sprite');
+        const img = slot.querySelector('img.sprite-img');
+        const fallback = slot.querySelector('.sprite-fallback');
+        if (!img) return;
+
+        const rutaConfig = CONFIG_SPRITES[key] || '';
+        const rutaDirecta = img.getAttribute('src') || '';
+        const rutaFinal = rutaConfig.trim() !== '' ? rutaConfig.trim() : rutaDirecta.trim();
+
+        const activarImagen = () => {
+          if (img.naturalWidth > 0) {
+            img.style.display = 'block';
+            if (fallback) fallback.style.display = 'none';
+          }
+        };
+
+        const activarRespaldo = () => {
+          img.style.display = 'none';
+          if (fallback) fallback.style.display = 'flex';
+        };
+
+        img.onload = activarImagen;
+        img.onerror = activarRespaldo;
+
+        if (rutaFinal !== '') {
+          img.src = rutaFinal;
+          if (img.complete && img.naturalWidth > 0) activarImagen();
+        } else {
+          activarRespaldo();
+        }
+      });
+
+      // 2. Precargar sprites usados dentro de los Canvas (cursorLaberinto y particulaExplosion)
+      ['cursorLaberinto', 'particulaExplosion'].forEach(key => {
+        const ruta = (CONFIG_SPRITES[key] || '').trim();
+        if (ruta !== '') {
+          const img = new Image();
+          img.onload = () => {
+            if (img.naturalWidth > 0) {
+              SpritesCanvas[key] = img;
+              if (key === 'cursorLaberinto' && typeof dibujarLaberinto === 'function') {
+                dibujarLaberinto();
+              }
+            }
+          };
+          img.src = ruta;
+        }
+      });
+    }
+
+    /* =========================================================================
+       4. CLASE GESTOR DE AUDIO (4 PISTAS DE MÚSICA + PROCEDURAL + SFX)
+       ========================================================================= */
+    class GestorAudio {
+      constructor() {
+        this.ctx = null;
+        this.musicaActiva = true;
+        this.sfxActivos = true;
+        this.estadoActual = null;
+        this.audioElemento = null;
+        this.fadeTimer = null;
+        this.ambientTimer = null;
+        this.pasoSecuencia = 0;
+      }
+
+      inicializarContexto() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume().catch(() => {});
+        }
+      }
+
+      actualizarBotonesUI() {
+        document.querySelectorAll('.btn-toggle-music').forEach(btn => {
+          btn.classList.toggle('muted', !this.musicaActiva);
+          if (btn.textContent.includes('MÚSICA')) {
+            btn.textContent = this.musicaActiva ? '🎵 MÚSICA: ON' : '🎵 MÚSICA: OFF';
+          }
+        });
+        document.querySelectorAll('.btn-toggle-sfx').forEach(btn => {
+          btn.classList.toggle('muted', !this.sfxActivos);
+          if (btn.textContent.includes('EFECTOS')) {
+            btn.textContent = this.sfxActivos ? '🔊 EFECTOS: ON' : '🔊 EFECTOS: OFF';
+          }
+        });
+      }
+
+      alternarMusica() {
+        this.inicializarContexto();
+        this.musicaActiva = !this.musicaActiva;
+        this.actualizarBotonesUI();
+
+        if (!this.musicaActiva) {
+          this.detenerMusicaSuave();
+        } else if (this.estadoActual) {
+          const estado = this.estadoActual;
+          this.estadoActual = null;
+          this.reproducirMusicaEstado(estado);
+        }
+      }
+
+      alternarSFX() {
+        this.inicializarContexto();
+        this.sfxActivos = !this.sfxActivos;
+        this.actualizarBotonesUI();
+        if (this.sfxActivos) this.tono(880, 'sine', 0.06, 0.15);
+      }
+
+      detenerMusicaSuave() {
+        clearInterval(this.fadeTimer);
+        clearInterval(this.ambientTimer);
+        this.ambientTimer = null;
+
+        if (this.audioElemento) {
+          const audioSaliente = this.audioElemento;
+          this.audioElemento = null;
+          let vol = audioSaliente.volume;
+          this.fadeTimer = setInterval(() => {
+            vol = Math.max(0, vol - 0.08);
+            audioSaliente.volume = vol;
+            if (vol <= 0.01) {
+              clearInterval(this.fadeTimer);
+              audioSaliente.pause();
+              audioSaliente.src = '';
+            }
+          }, 30);
+        }
+      }
+
+      reproducirMusicaEstado(estado) {
+        if (this.estadoActual === estado && this.musicaActiva) return;
+        this.estadoActual = estado;
+        this.detenerMusicaSuave();
+
+        if (!this.musicaActiva) return;
+
+        const rutaPista = (CONFIG_MUSICA[estado] || '').trim();
+        const esBucle = (estado === 'menu' || estado === 'gameplay');
+
+        if (rutaPista !== '') {
+          // Reproducir archivo MP3/OGG/WAV configurado en CONFIG_MUSICA
+          const audio = new Audio(rutaPista);
+          audio.loop = esBucle;
+          audio.volume = 0;
+          this.audioElemento = audio;
+
+          audio.play().then(() => {
+            let vol = 0;
+            const targetVol = 0.55;
+            const fadeIn = setInterval(() => {
+              if (this.audioElemento !== audio) {
+                clearInterval(fadeIn);
+                return;
+              }
+              vol = Math.min(targetVol, vol + 0.06);
+              audio.volume = vol;
+              if (vol >= targetVol) clearInterval(fadeIn);
+            }, 35);
+          }).catch(() => {
+            // Si el navegador bloquea autoplay o falla la ruta, usa respaldo procedural
+            this.iniciarMusicaProcedural(estado);
+          });
+        } else {
+          // Respaldo procedural con Web Audio API
+          this.iniciarMusicaProcedural(estado);
+        }
+      }
+
+      iniciarMusicaProcedural(estado) {
+        this.inicializarContexto();
+        if (!this.ctx || !this.musicaActiva) return;
+
+        this.pasoSecuencia = 0;
+
+        if (estado === 'menu') {
+          // Pulso táctico atmosférico de sala de control
+          const tocarPasoMenu = () => {
+            if (!this.musicaActiva || this.estadoActual !== 'menu') return;
+            const notas = [110, 110, 130.81, 98]; // A2, A2, C3, G2
+            const freq = notas[this.pasoSecuencia % notas.length];
+            this.notaAmbiental(freq, 'triangle', 1.4, 0.045);
+            if (this.pasoSecuencia % 4 === 0) {
+              this.notaAmbiental(880, 'sine', 0.25, 0.02); // Ping de radar sutil
+            }
+            this.pasoSecuencia++;
+          };
+          tocarPasoMenu();
+          this.ambientTimer = setInterval(tocarPasoMenu, 1200);
+        } else if (estado === 'gameplay') {
+          // Secuencia rítmica de tensión creciente
+          const tocarPasoGameplay = () => {
+            if (!this.musicaActiva || this.estadoActual !== 'gameplay') return;
+            const bajo = [73.42, 73.42, 87.31, 65.41, 73.42, 73.42, 98.00, 82.41]; // D2 menor
+            const freq = bajo[this.pasoSecuencia % bajo.length];
+            this.notaAmbiental(freq, 'sawtooth', 0.35, 0.032, 320);
+            if (this.pasoSecuencia % 2 === 1) {
+              this.notaAmbiental(freq * 4, 'sine', 0.12, 0.018, 1200);
+            }
+            this.pasoSecuencia++;
+          };
+          tocarPasoGameplay();
+          this.ambientTimer = setInterval(tocarPasoGameplay, 520);
+        } else if (estado === 'victoria') {
+          // Fanfarria triunfal (suena una vez)
+          const acordes = [261.63, 329.63, 392.00, 523.25, 659.25, 783.99];
+          acordes.forEach((f, idx) => {
+            setTimeout(() => {
+              if (this.musicaActiva && this.estadoActual === 'victoria') {
+                this.notaAmbiental(f, 'triangle', 0.9, 0.07);
+              }
+            }, idx * 140);
+          });
+        } else if (estado === 'derrota') {
+          // Acorde grave descendente dramático (suena una vez)
+          const notasDerrota = [130.81, 123.47, 110.00, 98.00, 65.41];
+          notasDerrota.forEach((f, idx) => {
+            setTimeout(() => {
+              if (this.musicaActiva && this.estadoActual === 'derrota') {
+                this.notaAmbiental(f, 'sawtooth', 1.3, 0.06, 260);
+              }
+            }, idx * 320);
+          });
+        }
+      }
+
+      notaAmbiental(freq, tipo, duracion, vol, filtroFreq = 650) {
+        if (!this.ctx || !this.musicaActiva) return;
+        try {
+          const ahora = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const filter = this.ctx.createBiquadFilter();
+          const gain = this.ctx.createGain();
+
+          osc.type = tipo;
+          osc.frequency.setValueAtTime(freq, ahora);
+
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(filtroFreq, ahora);
+
+          gain.gain.setValueAtTime(0.0001, ahora);
+          gain.gain.linearRampToValueAtTime(vol, ahora + 0.04);
+          gain.gain.exponentialRampToValueAtTime(0.0001, ahora + duracion);
+
+          osc.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start(ahora);
+          osc.stop(ahora + duracion + 0.05);
+        } catch (e) {}
+      }
+
+      /* --- EFECTOS DE SONIDO (SFX) --- */
+      tono(freq = 800, tipo = 'sine', duracion = 0.08, vol = 0.18) {
+        if (!this.sfxActivos) return;
+        this.inicializarContexto();
+        if (!this.ctx) return;
+        try {
+          const ahora = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = tipo;
+          osc.frequency.setValueAtTime(freq, ahora);
+          gain.gain.setValueAtTime(vol, ahora);
+          gain.gain.exponentialRampToValueAtTime(0.0001, ahora + duracion);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(ahora);
+          osc.stop(ahora + duracion);
+        } catch (e) {}
+      }
+
+      sfxCorteCable() {
+        this.tono(1400, 'sawtooth', 0.05, 0.22);
+        setTimeout(() => this.tono(420, 'triangle', 0.09, 0.2), 35);
+      }
+
+      sfxStrike() {
+        this.tono(155, 'sawtooth', 0.28, 0.35);
+        setTimeout(() => this.tono(115, 'sawtooth', 0.32, 0.35), 110);
+      }
+
+      sfxModuloResuelto() {
+        [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
+          setTimeout(() => this.tono(f, 'sine', 0.18, 0.18), i * 65);
+        });
+      }
+
+      sfxCongelarReloj() {
+        [1200, 950, 720, 540].forEach((f, i) => {
+          setTimeout(() => this.tono(f, 'triangle', 0.2, 0.16), i * 75);
+        });
+      }
+
+      sfxDetonacionIndividual(tonoPitch = 1.0, duracion = 1.9) {
+        if (!this.sfxActivos) return;
+        this.inicializarContexto();
+        if (!this.ctx) return;
+        try {
+          const bufferSize = Math.floor(this.ctx.sampleRate * duracion);
+          const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+          const noise = this.ctx.createBufferSource();
+          noise.buffer = buffer;
+
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(950 * tonoPitch, this.ctx.currentTime);
+          filter.frequency.exponentialRampToValueAtTime(18, this.ctx.currentTime + duracion);
+
+          const gain = this.ctx.createGain();
+          gain.gain.setValueAtTime(0.95, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duracion);
+
+          noise.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.ctx.destination);
+          noise.start();
+        } catch (e) {}
+      }
+
+      reproducirExplosionCadena() {
+        const retardos = [0, 170, 340, 520, 740, 980, 1250, 1550, 1900, 2250];
+        retardos.forEach((ms, idx) => {
+          setTimeout(() => {
+            const pitch = Math.max(0.35, 1.25 - idx * 0.08);
+            this.sfxDetonacionIndividual(pitch, 2.1);
+            if (idx % 2 === 0) this.tono(75, 'sawtooth', 0.35, 0.35);
+          }, ms);
+        });
+      }
+    }
+
+    const gestorAudio = new GestorAudio();
+
+    /* =========================================================================
+       5. SISTEMA CINEMATOGRÁFICO DE EXPLOSIONES EN CADENA (CANVAS)
+       ========================================================================= */
+    const SistemaExplosiones = {
+      canvas: null,
+      ctx: null,
+      particulas: [],
+      ondas: [],
+      animId: null,
+
+      init() {
+        this.canvas = document.getElementById('explosion-canvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.ajustarTamano();
+        window.addEventListener('resize', () => this.ajustarTamano());
+      },
+
+      ajustarTamano() {
+        if (!this.canvas) return;
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+      },
+
+      destello() {
+        const flash = document.getElementById('flash-screen');
+        flash.classList.add('flash-on');
+        setTimeout(() => flash.classList.remove('flash-on'), 75);
+      },
+
+      detonarFoco(x, y, cantidad = 110) {
+        this.destello();
+        const paleta = ['#ffffff', '#fef08a', '#fb923c', '#ef4444', '#dc2626', '#7f1d1d', '#334155'];
+
+        this.ondas.push({
+          x,
+          y,
+          radio: 12,
+          velocidad: 13 + Math.random() * 6,
+          alfa: 1.0,
+          color: paleta[Math.floor(Math.random() * 3)]
+        });
+
+        for (let i = 0; i < cantidad; i++) {
+          const angulo = Math.random() * Math.PI * 2;
+          const velocidad = Math.random() * 24 + 4;
+          this.particulas.push({
+            x,
+            y,
+            vx: Math.cos(angulo) * velocidad,
+            vy: Math.sin(angulo) * velocidad,
+            tamano: Math.random() * 16 + 4,
+            color: paleta[Math.floor(Math.random() * paleta.length)],
+            alfa: 1.0,
+            decaimiento: Math.random() * 0.016 + 0.008,
+            gravedad: 0.16,
+            rotacion: Math.random() * Math.PI * 2,
+            velRot: (Math.random() - 0.5) * 0.2
+          });
+        }
+      },
+
+      iniciarSecuenciaCadena(alFinalizar) {
+        this.canvas.classList.remove('hidden');
+        this.particulas = [];
+        this.ondas = [];
+
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+        const cx = w / 2;
+        const cy = h / 2;
+
+        // 10 focos escalonados en toda la pantalla
+        const focos = [
+          { x: cx, y: cy, delay: 0 },
+          { x: cx - w * 0.26, y: cy - h * 0.22, delay: 170 },
+          { x: cx + w * 0.28, y: cy + h * 0.20, delay: 340 },
+          { x: cx - w * 0.20, y: cy + h * 0.25, delay: 520 },
+          { x: cx + w * 0.24, y: cy - h * 0.24, delay: 740 },
+          { x: cx, y: cy - h * 0.30, delay: 980 },
+          { x: cx - w * 0.32, y: cy, delay: 1250 },
+          { x: cx + w * 0.32, y: cy + h * 0.05, delay: 1550 },
+          { x: cx - w * 0.12, y: cy - h * 0.12, delay: 1900 },
+          { x: cx, y: cy, delay: 2250 }
+        ];
+
+        focos.forEach(f => {
+          setTimeout(() => {
+            this.detonarFoco(f.x, f.y, 120);
+          }, f.delay);
+        });
+
+        this.animar();
+
+        setTimeout(() => {
+          this.detener();
+          if (typeof alFinalizar === 'function') alFinalizar();
+        }, 2800);
+      },
+
+      animar() {
+        this.ctx.fillStyle = 'rgba(5, 8, 16, 0.22)';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Ondas expansivas
+        for (let i = this.ondas.length - 1; i >= 0; i--) {
+          const o = this.ondas[i];
+          o.radio += o.velocidad;
+          o.alfa -= 0.028;
+          if (o.alfa <= 0) {
+            this.ondas.splice(i, 1);
+            continue;
+          }
+          this.ctx.save();
+          this.ctx.globalAlpha = o.alfa;
+          this.ctx.strokeStyle = o.color;
+          this.ctx.lineWidth = 6;
+          this.ctx.beginPath();
+          this.ctx.arc(o.x, o.y, o.radio, 0, Math.PI * 2);
+          this.ctx.stroke();
+          this.ctx.restore();
+        }
+
+        // Partículas (o sprite PNG particulaExplosion si está cargado)
+        const spriteParticula = SpritesCanvas.particulaExplosion;
+        for (let i = this.particulas.length - 1; i >= 0; i--) {
+          const p = this.particulas[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += p.gravedad;
+          p.alfa -= p.decaimiento;
+          p.tamano *= 0.98;
+          p.rotacion += p.velRot;
+
+          if (p.alfa <= 0) {
+            this.particulas.splice(i, 1);
+            continue;
+          }
+
+          this.ctx.save();
+          this.ctx.globalAlpha = Math.max(0, p.alfa);
+          if (spriteParticula) {
+            this.ctx.translate(p.x, p.y);
+            this.ctx.rotate(p.rotacion);
+            const dim = p.tamano * 2.4;
+            this.ctx.drawImage(spriteParticula, -dim / 2, -dim / 2, dim, dim);
+          } else {
+            this.ctx.fillStyle = p.color;
+            this.ctx.beginPath();
+            this.ctx.arc(p.x, p.y, Math.max(1.5, p.tamano), 0, Math.PI * 2);
+            this.ctx.fill();
+          }
+          this.ctx.restore();
+        }
+
+        this.animId = requestAnimationFrame(() => this.animar());
+      },
+
+      detener() {
+        if (this.animId) cancelAnimationFrame(this.animId);
+        this.animId = null;
+        if (this.ctx) this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        if (this.canvas) this.canvas.classList.add('hidden');
+        this.particulas = [];
+        this.ondas = [];
+      }
+    };
+
+    /* =========================================================================
+       6. ESTADO GLOBAL DEL JUEGO Y CONTROL DE PANTALLAS (4 ESTADOS)
+       ========================================================================= */
+    const TIEMPO_INICIAL = 300; // 05:00 minutos
+    const MAX_STRIKES = 3;
+
+    let tiempoRestante = TIEMPO_INICIAL;
+    let tiempoCongelado = 0; // Hito 1 congela el reloj 15s
+    let intervaloReloj = null;
+    let strikes = 0;
+    let modulosResueltos = [false, false, false, false];
+    let partidaTerminada = true;
+    let cubiertaDesbloqueada = false;
+    let cubiertaAbierta = false;
+
+    function vibrarDispositivo(patron) {
+      try {
+        if (navigator && typeof navigator.vibrate === 'function') {
+          navigator.vibrate(patron);
+        }
+      } catch (e) {}
+    }
+
+    function cambiarPantalla(estado) {
+      document.getElementById('pantalla-menu').classList.add('hidden');
+      document.getElementById('pantalla-gameplay').classList.add('hidden');
+      document.getElementById('pantalla-victoria').classList.add('hidden');
+      document.getElementById('pantalla-derrota').classList.add('hidden');
+
+      const manual = document.getElementById('floating-manual');
+
+      if (estado === 'menu') {
+        document.getElementById('pantalla-menu').classList.remove('hidden');
+        manual.classList.add('hidden');
+      } else if (estado === 'gameplay') {
+        document.getElementById('pantalla-gameplay').classList.remove('hidden');
+        manual.classList.remove('hidden');
+        manual.classList.add('collapsed');
+        document.getElementById('manual-handle-text').textContent = '📖 MANUAL TÁCTICO ▲';
+      } else if (estado === 'victoria') {
+        document.getElementById('pantalla-victoria').classList.remove('hidden');
+        manual.classList.add('hidden');
+      } else if (estado === 'derrota') {
+        document.getElementById('pantalla-derrota').classList.remove('hidden');
+        manual.classList.add('hidden');
+      }
+
+      gestorAudio.reproducirMusicaEstado(estado);
+    }
+
+    function volverAlMenu() {
+      partidaTerminada = true;
+      clearInterval(intervaloReloj);
+      SistemaExplosiones.detener();
+      document.body.classList.remove('shake-massive', 'shake-light');
+      cambiarPantalla('menu');
+    }
+
+    function iniciarMision() {
+      gestorAudio.inicializarContexto();
+      gestorAudio.tono(880, 'sine', 0.08, 0.18);
+
+      // Reiniciar variables
+      tiempoRestante = TIEMPO_INICIAL;
+      tiempoCongelado = 0;
+      strikes = 0;
+      modulosResueltos = [false, false, false, false];
+      partidaTerminada = false;
+      cubiertaDesbloqueada = false;
+      cubiertaAbierta = false;
+
+      // Reiniciar UI del HUD y Chasis
+      document.body.classList.remove('shake-massive', 'shake-light');
+      document.getElementById('bomb-chassis').classList.remove('core-alert-active');
+      document.getElementById('hud-timer-box').classList.remove('danger-fast');
+      document.getElementById('hud-core-status').textContent = 'NÚCLEO ARMADO // VIVO';
+      document.getElementById('hud-core-status').style.color = 'var(--accent-amber)';
+      document.getElementById('milestone-banner').classList.add('hidden');
+
+      [1, 2, 3].forEach(i => document.getElementById(`strike-pip-${i}`).classList.remove('active'));
+      [1, 2, 3, 4].forEach(i => {
+        document.getElementById(`m-pip-${i}`).classList.remove('done');
+        document.getElementById(`led-mod-${i}`).classList.remove('on');
+        document.getElementById(`card-mod-${i}`).classList.remove('solved');
+      });
+
+      document.getElementById('hud-milestone-text').textContent = '0 / 4';
+      document.getElementById('led-master').classList.remove('on');
+      document.getElementById('acrylic-shield').classList.remove('opened');
+
+      const lockPill = document.getElementById('cover-lock-pill');
+      lockPill.className = 'lock-pill locked';
+      lockPill.textContent = '🔒 SEGURO ACTIVO — COMPLETA LOS 4 MÓDULOS';
+
+      actualizarVisorReloj();
+      inicializarModulosAleatorios();
+      cambiarPantalla('gameplay');
+      iniciarTemporizador();
+    }
+
+    function iniciarTemporizador() {
+      clearInterval(intervaloReloj);
+      intervaloReloj = setInterval(() => {
+        if (partidaTerminada) return;
+
+        // Si el Hito 1 congeló el reloj, descontar segundos de congelamiento
+        if (tiempoCongelado > 0) {
+          tiempoCongelado--;
+          actualizarVisorReloj();
+          gestorAudio.tono(1150, 'sine', 0.02, 0.04);
+          return;
+        }
+
+        tiempoRestante--;
+        actualizarVisorReloj();
+
+        if (tiempoRestante <= 30 && tiempoRestante > 0) {
+          gestorAudio.tono(1050, 'sine', 0.05, 0.22);
+        } else if (tiempoRestante % 2 === 0 && tiempoRestante > 0) {
+          gestorAudio.tono(640, 'sine', 0.02, 0.05);
+        }
+
+        if (tiempoRestante <= 0) {
+          tiempoRestante = 0;
+          actualizarVisorReloj();
+          dispararDerrota('TIEMPO AGOTADO (00:00)');
+        }
+      }, 1000);
+    }
+
+    function actualizarVisorReloj() {
+      const box = document.getElementById('hud-timer-box');
+      const label = document.getElementById('hud-timer-label');
+      const digits = document.getElementById('hud-timer-digits');
+
+      if (tiempoCongelado > 0) {
+        box.classList.add('frozen');
+        label.textContent = `❄ CONGELADO (${tiempoCongelado}s)`;
+      } else {
+        box.classList.remove('frozen');
+        label.textContent = 'DETONACIÓN EN';
+      }
+
+      const mins = Math.floor(Math.max(0, tiempoRestante) / 60);
+      const segs = Math.max(0, tiempoRestante) % 60;
+      digits.textContent = `${String(mins).padStart(2, '0')}:${String(segs).padStart(2, '0')}`;
+    }
+
+    function mostrarBannerHito(texto) {
+      const banner = document.getElementById('milestone-banner');
+      banner.textContent = texto;
+      banner.classList.remove('hidden');
+      clearTimeout(banner._hideTimeout);
+      banner._hideTimeout = setTimeout(() => {
+        banner.classList.add('hidden');
+      }, 4500);
+    }
+
+    function registrarStrike() {
+      if (partidaTerminada) return;
+
+      strikes++;
+      tiempoCongelado = 0; // Un error rompe el congelamiento
+      tiempoRestante = Math.max(0, tiempoRestante - 30);
+      actualizarVisorReloj();
+      gestorAudio.sfxStrike();
+      vibrarDispositivo([120, 60, 180]);
+
+      const pip = document.getElementById(`strike-pip-${strikes}`);
+      if (pip) pip.classList.add('active');
+
+      document.body.classList.remove('shake-light');
+      void document.body.offsetWidth;
+      document.body.classList.add('shake-light');
+
+      if (strikes >= MAX_STRIKES) {
+        dispararDerrota('LÍMITE DE 3 STRIKES ALCANZADO');
+      } else if (tiempoRestante <= 0) {
+        dispararDerrota('TIEMPO AGOTADO POR PENALIZACIÓN (-30s)');
+      }
+    }
+
+    function marcarModuloResuelto(indice) {
+      if (modulosResueltos[indice] || partidaTerminada) return;
+      modulosResueltos[indice] = true;
+
+      const num = indice + 1;
+      document.getElementById(`led-mod-${num}`).classList.add('on');
+      document.getElementById(`card-mod-${num}`).classList.add('solved');
+      gestorAudio.sfxModuloResuelto();
+
+      evaluarHitos();
+    }
+
+    function evaluarHitos() {
+      const resueltos = modulosResueltos.filter(Boolean).length;
+      document.getElementById('hud-milestone-text').textContent = `${resueltos} / 4`;
+
+      for (let i = 1; i <= resueltos; i++) {
+        document.getElementById(`m-pip-${i}`).classList.add('done');
+      }
+
+      if (resueltos === 1) {
+        // HITO 1: Estabilización Primaria -> Congela reloj 15s
+        tiempoCongelado = 15;
+        actualizarVisorReloj();
+        gestorAudio.sfxCongelarReloj();
+        mostrarBannerHito('❄️ HITO 1 ALCANZADO: ESTABILIZACIÓN PRIMARIA — RELOJ CONGELADO 15 SEGUNDOS');
+      } else if (resueltos === 2) {
+        // HITO 2: Alerta de Núcleo
+        document.getElementById('bomb-chassis').classList.add('core-alert-active');
+        document.getElementById('hud-timer-box').classList.add('danger-fast');
+        document.getElementById('hud-core-status').textContent = 'ALERTA DE NÚCLEO // TENSIÓN ALTA';
+        document.getElementById('hud-core-status').style.color = 'var(--accent-red)';
+        mostrarBannerHito('⚠️ HITO 2 ALCANZADO: ALERTA DE NÚCLEO — FRECUENCIA CRÍTICA');
+      } else if (resueltos === 3) {
+        // HITO 3: Sincronización de clave
+        mostrarBannerHito('🔑 HITO 3 ALCANZADO: 75% COMPLETADO — FALTA UN ÚLTIMO MÓDULO');
+      } else if (resueltos === 4) {
+        // HITO 4: Clave Maestra -> Desbloquea cubierta protectora del botón DEFUSE
+        cubiertaDesbloqueada = true;
+        document.getElementById('led-master').classList.add('on');
+        const lockPill = document.getElementById('cover-lock-pill');
+        lockPill.className = 'lock-pill unlocked';
+        lockPill.textContent = '🔓 CUBIERTA DESBLOQUEADA — TOCA LA TAPA Y PULSA DEFUSE';
+        mostrarBannerHito('✅ HITO 4 ALCANZADO: SEGURO LIBERADO — ¡ABRE LA CUBIERTA Y PULSA DEFUSE!');
+      }
+    }
+
+    /* =========================================================================
+       7. MINIJUEGO 1: CABLES DE CONTROL (ALEATORIZACIÓN + REGLAS DEL MANUAL)
+       ========================================================================= */
+    const ETIQUETAS_COLOR_CABLE = {
+      rojo: 'ROJO',
+      azul: 'AZUL',
+      amarillo: 'AMAR.',
+      negro: 'NEGRO',
+      verde: 'VERDE'
+    };
+
+    let cablesActuales = [];
+    let indiceCableCorrecto = 0;
+
+    function inicializarModuloCables() {
+      const colores = ['rojo', 'azul', 'amarillo', 'negro', 'verde'];
+      cablesActuales = [];
+      for (let i = 0; i < 5; i++) {
+        cablesActuales.push(colores[Math.floor(Math.random() * colores.length)]);
+      }
+
+      // Calcular el cable correcto según las 4 reglas exactas del Manual (MOD 1)
+      const cantRojos = cablesActuales.filter(c => c === 'rojo').length;
+      const cantAmarillos = cablesActuales.filter(c => c === 'amarillo').length;
+      const cantAzules = cablesActuales.filter(c => c === 'azul').length;
+      const ultimoColor = cablesActuales[4];
+
+      if (cantRojos > 2) {
+        // Regla 1: Más de 2 rojos -> cortar último cable rojo
+        indiceCableCorrecto = cablesActuales.lastIndexOf('rojo');
+      } else if (ultimoColor === 'verde' && cantAmarillos === 1) {
+        // Regla 2: Último verde y exactamente 1 amarillo -> cortar 1.er cable
+        indiceCableCorrecto = 0;
+      } else if (cantAzules === 0) {
+        // Regla 3: Ningún azul -> cortar 2.º cable
+        indiceCableCorrecto = 1;
+      } else {
+        // Regla 4: Cualquier otro caso -> cortar 4.º cable
+        indiceCableCorrecto = 3;
+      }
+
+      const rack = document.getElementById('wires-rack');
+      rack.innerHTML = '';
+
+      cablesActuales.forEach((color, idx) => {
+        const item = document.createElement('div');
+        item.className = `wire-item c-${color}`;
+        item.id = `wire-slot-${idx}`;
+        item.innerHTML = `
+          <div class="wire-socket"></div>
+          <div class="wire-body">
+            <div class="wire-half-top"></div>
+            <div class="wire-half-bottom"></div>
+          </div>
+          <div class="wire-socket"></div>
+          <span class="wire-color-tag">${ETIQUETAS_COLOR_CABLE[color]}</span>
+          <span class="wire-label-num">0${idx + 1}</span>
+        `;
+        item.onclick = () => cortarCable(idx);
+        rack.appendChild(item);
+      });
+    }
+
+    function crearChispasCable(contenedor) {
+      for (let i = 0; i < 12; i++) {
+        const spark = document.createElement('span');
+        spark.className = 'wire-spark';
+        const ang = Math.random() * Math.PI * 2;
+        const dist = 20 + Math.random() * 32;
+        spark.style.left = '50%';
+        spark.style.top = '45%';
+        spark.style.setProperty('--sx', `${Math.cos(ang) * dist}px`);
+        spark.style.setProperty('--sy', `${Math.sin(ang) * dist}px`);
+        contenedor.appendChild(spark);
+        setTimeout(() => spark.remove(), 450);
+      }
+    }
+
+    function cortarCable(idx) {
+      if (modulosResueltos[0] || partidaTerminada) return;
+      const el = document.getElementById(`wire-slot-${idx}`);
+      if (!el || el.classList.contains('cut')) return;
+
+      el.classList.add('cut');
+      crearChispasCable(el);
+      gestorAudio.sfxCorteCable();
+      vibrarDispositivo(45);
+
+      if (idx === indiceCableCorrecto) {
+        marcarModuloResuelto(0);
+      } else {
+        registrarStrike();
+      }
+    }
+
+    /* =========================================================================
+       8. MINIJUEGO 2: DECODIFICADOR HEXADECIMAL (ALEATORIZADO)
+       ========================================================================= */
+    const TABLA_HEX_PIN = {
+      'A': '4',
+      'B': '9',
+      'C': '7',
+      'D': '0',
+      'E': '3',
+      'F': '5',
+      '2': '1',
+      '4': '2',
+      '8': '6'
+    };
+
+    let pinObjetivo = '';
+    let pinIngresado = '';
+
+    function inicializarModuloHex() {
+      const simbolos = Object.keys(TABLA_HEX_PIN);
+      const elegidos = [];
+      pinObjetivo = '';
+      pinIngresado = '';
+
+      for (let i = 0; i < 4; i++) {
+        const sim = simbolos[Math.floor(Math.random() * simbolos.length)];
+        elegidos.push(sim);
+        pinObjetivo += TABLA_HEX_PIN[sim];
+      }
+
+      document.getElementById('hex-code-display').textContent = elegidos.join(' ');
+      actualizarDisplayPin();
+    }
+
+    function actualizarDisplayPin() {
+      const formateado = pinIngresado.padEnd(4, '_').split('').join(' ');
+      document.getElementById('pin-entered-display').textContent = formateado;
+    }
+
+    function pulsarTeclaPin(digito) {
+      if (modulosResueltos[1] || partidaTerminada || pinIngresado.length >= 4) return;
+      gestorAudio.tono(860, 'sine', 0.04, 0.14);
+      pinIngresado += digito;
+      actualizarDisplayPin();
+    }
+
+    function limpiarPin() {
+      if (modulosResueltos[1] || partidaTerminada) return;
+      gestorAudio.tono(380, 'sine', 0.05, 0.14);
+      pinIngresado = '';
+      actualizarDisplayPin();
+    }
+
+    function confirmarPin() {
+      if (modulosResueltos[1] || partidaTerminada) return;
+      if (pinIngresado === pinObjetivo) {
+        marcarModuloResuelto(1);
+      } else {
+        registrarStrike();
+        pinIngresado = '';
+        actualizarDisplayPin();
+      }
+    }
+
+    /* =========================================================================
+       9. MINIJUEGO 3: LABERINTO DE CIRCUITO (CANVAS HIGH-DPI TÁCTIL + SPRITE)
+       ========================================================================= */
+    const MAZE_LOGICAL_W = 360;
+    const MAZE_LOGICAL_H = 165;
+    let mazeCanvas = null;
+    let mazeCtx = null;
+    let rutaLaberinto = null;
+    let arrastrandoNodo = false;
+    let posNodo = { x: 34, y: 82 };
+    let puntoInicio = { x: 34, y: 82 };
+    let puntoMeta = { x: 326, y: 82 };
+    let eventosMazeRegistrados = false;
+
+    function configurarCanvasMazeHighDPI() {
+      if (!mazeCanvas) return;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      mazeCanvas.width = MAZE_LOGICAL_W * dpr;
+      mazeCanvas.height = MAZE_LOGICAL_H * dpr;
+      mazeCtx = mazeCanvas.getContext('2d');
+      mazeCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function inicializarModuloLaberinto() {
+      mazeCanvas = document.getElementById('maze-canvas');
+      configurarCanvasMazeHighDPI();
+
+      // Elegir 1 de 3 trazados aleatorios calibrados para dedos en móviles
+      const variante = Math.floor(Math.random() * 3);
+      rutaLaberinto = new Path2D();
+
+      if (variante === 0) {
+        puntoInicio = { x: 34, y: 82 };
+        puntoMeta = { x: 326, y: 82 };
+        rutaLaberinto.moveTo(34, 82);
+        rutaLaberinto.bezierCurveTo(100, 20, 140, 144, 190, 144);
+        rutaLaberinto.bezierCurveTo(240, 144, 265, 22, 326, 82);
+      } else if (variante === 1) {
+        puntoInicio = { x: 34, y: 38 };
+        puntoMeta = { x: 326, y: 126 };
+        rutaLaberinto.moveTo(34, 38);
+        rutaLaberinto.lineTo(145, 38);
+        rutaLaberinto.quadraticCurveTo(180, 38, 180, 82);
+        rutaLaberinto.quadraticCurveTo(180, 126, 215, 126);
+        rutaLaberinto.lineTo(326, 126);
+      } else {
+        puntoInicio = { x: 34, y: 125 };
+        puntoMeta = { x: 326, y: 40 };
+        rutaLaberinto.moveTo(34, 125);
+        rutaLaberinto.bezierCurveTo(95, 125, 110, 30, 180, 30);
+        rutaLaberinto.bezierCurveTo(250, 30, 250, 134, 326, 40);
+      }
+
+      arrastrandoNodo = false;
+      posNodo = { ...puntoInicio };
+      dibujarLaberinto();
+
+      if (!eventosMazeRegistrados) {
+        eventosMazeRegistrados = true;
+
+        const obtenerCoordenadas = (e) => {
+          const rect = mazeCanvas.getBoundingClientRect();
+          const scaleX = MAZE_LOGICAL_W / rect.width;
+          const scaleY = MAZE_LOGICAL_H / rect.height;
+          let clientX, clientY;
+          if (e.touches && e.touches.length > 0) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+          } else {
+            clientX = e.clientX;
+            clientY = e.clientY;
+          }
+          return {
+            x: (clientX - rect.left) * scaleX,
+            y: (clientY - rect.top) * scaleY
+          };
+        };
+
+        const iniciarArrastre = (e) => {
+          if (modulosResueltos[2] || partidaTerminada) return;
+          const p = obtenerCoordenadas(e);
+          if (Math.hypot(p.x - puntoInicio.x, p.y - puntoInicio.y) <= 32) {
+            arrastrandoNodo = true;
+            posNodo = p;
+            gestorAudio.tono(720, 'sine', 0.04, 0.1);
+            vibrarDispositivo(25);
+            dibujarLaberinto();
+          }
+        };
+
+        const moverArrastre = (e) => {
+          if (!arrastrandoNodo || modulosResueltos[2] || partidaTerminada) return;
+          const p = obtenerCoordenadas(e);
+
+          // Verificar si el dedo/cursor sigue dentro del canal conductor
+          mazeCtx.save();
+          mazeCtx.setTransform(1, 0, 0, 1, 0, 0);
+          mazeCtx.lineWidth = 36;
+          mazeCtx.lineCap = 'round';
+          mazeCtx.lineJoin = 'round';
+          const dentroDelCanal = mazeCtx.isPointInStroke(rutaLaberinto, p.x, p.y);
+          mazeCtx.restore();
+
+          if (!dentroDelCanal) {
+            arrastrandoNodo = false;
+            posNodo = { ...puntoInicio };
+            registrarStrike();
+            dibujarLaberinto();
+            return;
+          }
+
+          posNodo = p;
+          dibujarLaberinto();
+
+          // Verificar llegada a la meta
+          if (Math.hypot(p.x - puntoMeta.x, p.y - puntoMeta.y) <= 22) {
+            arrastrandoNodo = false;
+            posNodo = { ...puntoMeta };
+            dibujarLaberinto();
+            marcarModuloResuelto(2);
+          }
+        };
+
+        const soltarArrastre = () => {
+          if (arrastrandoNodo && !modulosResueltos[2]) {
+            arrastrandoNodo = false;
+            posNodo = { ...puntoInicio };
+            dibujarLaberinto();
+          }
+        };
+
+        mazeCanvas.addEventListener('mousedown', iniciarArrastre);
+        window.addEventListener('mousemove', moverArrastre);
+        window.addEventListener('mouseup', soltarArrastre);
+
+        mazeCanvas.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          iniciarArrastre(e);
+        }, { passive: false });
+
+        mazeCanvas.addEventListener('touchmove', (e) => {
+          e.preventDefault();
+          moverArrastre(e);
+        }, { passive: false });
+
+        window.addEventListener('touchend', soltarArrastre);
+      }
+    }
+
+    function dibujarLaberinto() {
+      if (!mazeCtx || !rutaLaberinto) return;
+      mazeCtx.clearRect(0, 0, MAZE_LOGICAL_W, MAZE_LOGICAL_H);
+
+      // Fondo oscuro táctico
+      mazeCtx.fillStyle = '#04070d';
+      mazeCtx.fillRect(0, 0, MAZE_LOGICAL_W, MAZE_LOGICAL_H);
+
+      // Borde exterior de peligro
+      mazeCtx.strokeStyle = '#334155';
+      mazeCtx.lineWidth = 36;
+      mazeCtx.lineCap = 'round';
+      mazeCtx.lineJoin = 'round';
+      mazeCtx.stroke(rutaLaberinto);
+
+      // Canal conductor seguro calibrado para pulgar/índice
+      mazeCtx.strokeStyle = '#162033';
+      mazeCtx.lineWidth = 26;
+      mazeCtx.stroke(rutaLaberinto);
+
+      // Línea central guía
+      mazeCtx.strokeStyle = 'rgba(6, 182, 212, 0.3)';
+      mazeCtx.lineWidth = 2;
+      mazeCtx.stroke(rutaLaberinto);
+
+      // Halo luminoso en nodo INICIO (Verde)
+      mazeCtx.fillStyle = 'rgba(16, 185, 129, 0.22)';
+      mazeCtx.beginPath();
+      mazeCtx.arc(puntoInicio.x, puntoInicio.y, 18, 0, Math.PI * 2);
+      mazeCtx.fill();
+
+      mazeCtx.fillStyle = '#10b981';
+      mazeCtx.beginPath();
+      mazeCtx.arc(puntoInicio.x, puntoInicio.y, 12, 0, Math.PI * 2);
+      mazeCtx.fill();
+
+      // Halo luminoso en nodo META (Rojo)
+      mazeCtx.fillStyle = 'rgba(239, 68, 68, 0.22)';
+      mazeCtx.beginPath();
+      mazeCtx.arc(puntoMeta.x, puntoMeta.y, 18, 0, Math.PI * 2);
+      mazeCtx.fill();
+
+      mazeCtx.fillStyle = '#ef4444';
+      mazeCtx.beginPath();
+      mazeCtx.arc(puntoMeta.x, puntoMeta.y, 12, 0, Math.PI * 2);
+      mazeCtx.fill();
+
+      // Puntero / Argolla del jugador (Sprite PNG cursorLaberinto o anillo táctico)
+      const spriteCursor = SpritesCanvas.cursorLaberinto;
+      if (spriteCursor) {
+        mazeCtx.drawImage(spriteCursor, posNodo.x - 16, posNodo.y - 16, 32, 32);
+      } else {
+        mazeCtx.fillStyle = modulosResueltos[2] ? '#10b981' : '#f59e0b';
+        mazeCtx.beginPath();
+        mazeCtx.arc(posNodo.x, posNodo.y, 10, 0, Math.PI * 2);
+        mazeCtx.fill();
+        mazeCtx.strokeStyle = '#ffffff';
+        mazeCtx.lineWidth = 2.5;
+        mazeCtx.stroke();
+      }
+    }
+
+    /* =========================================================================
+       10. MINIJUEGO 4: CALIBRADOR F/V/P + VISUALIZADOR DE ONDA EN TIEMPO REAL
+       ========================================================================= */
+    let animOndaId = null;
+    let faseOnda = 0;
+
+    function inicializarModuloCalibrador() {
+      const sFreq = document.getElementById('slider-freq');
+      const sVolt = document.getElementById('slider-volt');
+      const sPres = document.getElementById('slider-pres');
+
+      // Valores iniciales aleatorios fuera de los rangos objetivo (88-91, 320-345, 60-68)
+      sFreq.value = (Math.random() < 0.5 ? (81 + Math.random() * 5) : (93 + Math.random() * 6)).toFixed(1);
+      sVolt.value = Math.random() < 0.5 ? Math.floor(215 + Math.random() * 80) : Math.floor(360 + Math.random() * 35);
+      sPres.value = Math.random() < 0.5 ? Math.floor(15 + Math.random() * 35) : Math.floor(75 + Math.random() * 20);
+
+      const actualizarLecturas = () => {
+        const f = parseFloat(sFreq.value);
+        const v = parseInt(sVolt.value, 10);
+        const p = parseInt(sPres.value, 10);
+
+        document.getElementById('read-freq').textContent = `${f.toFixed(1)} MHz`;
+        document.getElementById('read-volt').textContent = `${v} V`;
+        document.getElementById('read-pres').textContent = `${p} PSI`;
+
+        const okF = f >= 88.0 && f <= 91.0;
+        const okV = v >= 320 && v <= 345;
+        const okP = p >= 60 && p <= 68;
+
+        actualizarEtiquetaCalib('tag-freq', okF);
+        actualizarEtiquetaCalib('tag-volt', okV);
+        actualizarEtiquetaCalib('tag-pres', okP);
+      };
+
+      [sFreq, sVolt, sPres].forEach(slider => {
+        slider.oninput = () => {
+          gestorAudio.tono(520, 'sine', 0.015, 0.04);
+          actualizarLecturas();
+        };
+      });
+
+      actualizarLecturas();
+      iniciarVisualizadorOnda();
+    }
+
+    function actualizarEtiquetaCalib(id, enRango) {
+      const el = document.getElementById(id);
+      if (enRango) {
+        el.textContent = '[EN RANGO]';
+        el.className = 'slider-tag tag-ok';
+      } else {
+        el.textContent = '[AJUSTAR]';
+        el.className = 'slider-tag tag-err';
+      }
+    }
+
+    function iniciarVisualizadorOnda() {
+      cancelAnimationFrame(animOndaId);
+      const canvas = document.getElementById('calib-wave-canvas');
+      const ctx = canvas.getContext('2d');
+
+      const renderOnda = () => {
+        if (partidaTerminada) return;
+        const f = parseFloat(document.getElementById('slider-freq').value);
+        const v = parseInt(document.getElementById('slider-volt').value, 10);
+        const p = parseInt(document.getElementById('slider-pres').value, 10);
+
+        const todoEnRango = (f >= 88.0 && f <= 91.0) && (v >= 320 && v <= 345) && (p >= 60 && p <= 68);
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#03060c';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Línea base
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, canvas.height / 2);
+        ctx.lineTo(canvas.width, canvas.height / 2);
+        ctx.stroke();
+
+        // Onda armónica en tiempo real
+        ctx.strokeStyle = modulosResueltos[3] || todoEnRango ? '#10b981' : '#f59e0b';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+
+        const amplitud = ((v - 200) / 200) * 16 + 4;
+        const frecuencia = ((f - 80) / 20) * 0.14 + 0.03;
+        const ruido = todoEnRango ? 0 : Math.abs(p - 64) * 0.08;
+
+        for (let x = 0; x < canvas.width; x += 2) {
+          const jitter = ruido > 0 ? (Math.sin(x * 0.7 + faseOnda * 3) * ruido * 0.4) : 0;
+          const y = (canvas.height / 2) + Math.sin(x * frecuencia + faseOnda) * amplitud + jitter;
+          if (x === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+
+        faseOnda += 0.12;
+        animOndaId = requestAnimationFrame(renderOnda);
+      };
+
+      renderOnda();
+    }
+
+    function verificarCalibracion() {
+      if (modulosResueltos[3] || partidaTerminada) return;
+      const f = parseFloat(document.getElementById('slider-freq').value);
+      const v = parseInt(document.getElementById('slider-volt').value, 10);
+      const p = parseInt(document.getElementById('slider-pres').value, 10);
+
+      if (f >= 88.0 && f <= 91.0 && v >= 320 && v <= 345 && p >= 60 && p <= 68) {
+        marcarModuloResuelto(3);
+      } else {
+        registrarStrike();
+      }
+    }
+
+    function inicializarModulosAleatorios() {
+      inicializarModuloCables();
+      inicializarModuloHex();
+      inicializarModuloLaberinto();
+      inicializarModuloCalibrador();
+    }
+
+    /* =========================================================================
+       11. CUBIERTA ACRÍLICA, MANUAL FLOTANTE Y DESENLACES (VICTORIA / DERROTA)
+       ========================================================================= */
+    function abrirCubiertaAcrilica() {
+      if (partidaTerminada) return;
+      if (!cubiertaDesbloqueada) {
+        gestorAudio.sfxStrike();
+        mostrarBannerHito('🔒 SEGURO BLOQUEADO: RESUELVE LOS 4 MÓDULOS PRIMERO');
+        return;
+      }
+      cubiertaAbierta = true;
+      document.getElementById('acrylic-shield').classList.add('opened');
+      gestorAudio.tono(340, 'sawtooth', 0.14, 0.16);
+    }
+
+    function ejecutarDesactivacionFinal() {
+      if (!cubiertaAbierta || partidaTerminada) return;
+      partidaTerminada = true;
+      clearInterval(intervaloReloj);
+      cancelAnimationFrame(animOndaId);
+
+      const empleados = TIEMPO_INICIAL - tiempoRestante;
+      document.getElementById('vic-tiempo-restante').textContent = formatearMMSS(tiempoRestante);
+      document.getElementById('vic-tiempo-empleado').textContent = formatearMMSS(empleados);
+      document.getElementById('vic-strikes').textContent = `${strikes} / 3`;
+
+      // Calcular Rango según desempeño
+      const rangoEl = document.getElementById('victoria-rango');
+      if (strikes === 0 && tiempoRestante >= 150) {
+        rangoEl.textContent = 'RANGO S — ESPECIALISTA ÉLITE';
+      } else if (strikes <= 1 && tiempoRestante >= 90) {
+        rangoEl.textContent = 'RANGO A — ARTIFICIERO VETERANO';
+      } else if (tiempoRestante >= 30) {
+        rangoEl.textContent = 'RANGO B — OPERADOR TÁCTICO';
+      } else {
+        rangoEl.textContent = 'RANGO C — DESARME AL LÍMITE';
+      }
+
+      cambiarPantalla('victoria');
+    }
+
+    function dispararDerrota(causa) {
+      if (partidaTerminada) return;
+      partidaTerminada = true;
+      clearInterval(intervaloReloj);
+      cancelAnimationFrame(animOndaId);
+
+      // Detener música de gameplay y lanzar explosiones en cadena + vibración háptica
+      gestorAudio.detenerMusicaSuave();
+      gestorAudio.reproducirExplosionCadena();
+      vibrarDispositivo([200, 80, 250, 80, 400, 100, 500]);
+      document.body.classList.add('shake-massive');
+
+      const empleados = TIEMPO_INICIAL - Math.max(0, tiempoRestante);
+      const resueltos = modulosResueltos.filter(Boolean).length;
+
+      document.getElementById('der-causa').textContent = causa;
+      document.getElementById('der-tiempo-empleado').textContent = formatearMMSS(empleados);
+      document.getElementById('der-strikes').textContent = `${strikes} / 3`;
+      document.getElementById('der-modulos').textContent = `${resueltos} / 4`;
+
+      SistemaExplosiones.iniciarSecuenciaCadena(() => {
+        document.body.classList.remove('shake-massive');
+        cambiarPantalla('derrota');
+      });
+    }
+
+    function formatearMMSS(segundosTotales) {
+      const m = Math.floor(Math.max(0, segundosTotales) / 60);
+      const s = Math.max(0, segundosTotales) % 60;
+      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    /* --- Controles del Manual Desplegable Inferior Centrado --- */
+    function alternarColapsoManual() {
+      const manual = document.getElementById('floating-manual');
+      manual.classList.toggle('collapsed');
+      const estaPlegado = manual.classList.contains('collapsed');
+      document.getElementById('manual-handle-text').textContent =
+        estaPlegado ? '📖 MANUAL TÁCTICO ▲' : '📖 CERRAR MANUAL ▼';
+      gestorAudio.tono(660, 'sine', 0.03, 0.1);
+      vibrarDispositivo(20);
+    }
+
+    function cambiarPestanaManual(numero, boton) {
+      document.querySelectorAll('.m-tab').forEach(t => t.classList.remove('active'));
+      boton.classList.add('active');
+
+      document.querySelectorAll('.manual-page').forEach(p => p.classList.add('hidden'));
+      document.getElementById(`manual-page-${numero}`).classList.remove('hidden');
+      gestorAudio.tono(740, 'sine', 0.03, 0.1);
+    }
+
+    /* =========================================================================
+       12. ARRANQUE INICIAL AL CARGAR LA VENTANA
+       ========================================================================= */
+    window.addEventListener('load', () => {
+      SistemaExplosiones.init();
+      inicializarSprites();
+      cambiarPantalla('menu');
+    });
+  </script>
+</body>
+</html>
